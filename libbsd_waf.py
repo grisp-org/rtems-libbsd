@@ -693,7 +693,8 @@ def build(bld):
                 source = objs06_source)
     libbsd_use += ["objs06"]
 
-    source = ['freebsd/sys/arm/xilinx/zy7_slcr.c',
+    source = ['freebsd/sys/arm/at91/at91_mci.c',
+              'freebsd/sys/arm/xilinx/zy7_slcr.c',
               'freebsd/sys/cam/cam.c',
               'freebsd/sys/cam/scsi/scsi_all.c',
               'freebsd/sys/contrib/altq/altq/altq_cbq.c',
