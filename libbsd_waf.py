@@ -809,7 +809,8 @@ def build(bld):
                 source = objs08_source)
     libbsd_use += ["objs08"]
 
-    source = ['freebsd/sys/arm/xilinx/zy7_slcr.c',
+    source = ['freebsd/sys/arm/at91/at91_mci.c',
+              'freebsd/sys/arm/xilinx/zy7_slcr.c',
               'freebsd/sys/cam/cam.c',
               'freebsd/sys/cam/scsi/scsi_all.c',
               'freebsd/sys/crypto/blowfish/bf_ecb.c',
