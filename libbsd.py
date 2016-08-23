@@ -360,15 +360,21 @@ def mmc(mm):
     mod = builder.Module('mmc')
     mod.addKernelSpaceHeaderFiles(
         [
+            'sys/arm/at91/at91_mcireg.h',
+            'sys/arm/at91/at91_pdcreg.h',
+            'sys/arm/at91/at91reg.h',
+            'sys/arm/at91/at91var.h',
             'sys/dev/mmc/bridge.h',
             'sys/dev/mmc/mmcbrvar.h',
             'sys/dev/mmc/mmcreg.h',
             'sys/dev/mmc/mmcvar.h',
             'sys/dev/sdhci/sdhci.h',
+            'sys/sys/watchdog.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
         [
+            'sys/arm/at91/at91_mci.c',
             'sys/dev/mmc/mmc.c',
             'sys/dev/mmc/mmcsd.c',
             'sys/dev/sdhci/sdhci.c',
