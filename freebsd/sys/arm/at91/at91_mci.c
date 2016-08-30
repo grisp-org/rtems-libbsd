@@ -141,6 +141,13 @@ __FBSDID("$FreeBSD$");
 #define BBSIZE      (16*1024)
 #define MAX_BLOCKS  ((BBSIZE*BBCOUNT)/512)
 
+#ifdef __rtems__
+#ifdef BOARD_MCK
+uint32_t at91_master_clock = BOARD_MCK;
+#else
+uint32_t at91_master_clock;
+#endif
+#endif /* __rtems__ */
 static int mci_debug;
 
 struct at91_mci_softc {
@@ -374,8 +381,10 @@ at91_mci_attach(device_t dev)
 
 	sc->dev = dev;
 	sc->sc_cap = 0;
+#ifndef __rtems__
 	if (at91_is_rm92())
 		sc->sc_cap |= CAP_NEEDS_BYTESWAP;
+#endif /* __rtems__ */
 	/*
 	 * MCI1 Rev 2 controllers need some workarounds, flag if so.
 	 */
@@ -544,7 +553,7 @@ at91_mci_deactivate(device_t dev)
 static int
 at91_mci_is_mci1rev2xx(void)
 {
-
+#ifndef __rtems__
 	switch (soc_info.type) {
 	case AT91_T_SAM9260:
 	case AT91_T_SAM9263:
@@ -556,6 +565,10 @@ at91_mci_is_mci1rev2xx(void)
 	default:
 		return (0);
 	}
+#else /* __rtems__ */
+	/* Currently only supports the SAM V71 */
+	return 0;
+#endif /* __rtems__ */
 }
 
 static int
