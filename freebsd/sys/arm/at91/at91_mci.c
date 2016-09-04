@@ -75,7 +75,17 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/mmcbr_if.h>
 
 #include <rtems/bsd/local/opt_at91.h>
+#ifdef __rtems__
+/* Everything necessary for the DMA */
+#include <libchip/chip.h>
+static sXdmad xdmad;
+static sXdmadCfg xdmadCfg;
+#define XDMAD_ID_HSMCI 0
+#endif /* __rtems__ */
 
+#ifdef __rtems__
+#include <libchip/chip.h>
+#endif /* __rtems__ */
 /*
  * About running the MCI bus above 25MHz
  *
@@ -147,6 +157,7 @@ uint32_t at91_master_clock = BOARD_MCK;
 #else
 uint32_t at91_master_clock;
 #endif
+#define AT91_MCI_HAS_4WIRE 1
 #endif /* __rtems__ */
 static int mci_debug;
 
@@ -189,6 +200,10 @@ static void at91_mci_intr(void *);
 static int at91_mci_activate(device_t dev);
 static void at91_mci_deactivate(device_t dev);
 static int at91_mci_is_mci1rev2xx(void);
+#ifdef __rtems__
+static void at91_mci_read_done(struct at91_mci_softc *sc, uint32_t sr);
+static void at91_mci_write_done(struct at91_mci_softc *sc, uint32_t sr);
+#endif /* __rtems__ */
 
 #define AT91_MCI_LOCK(_sc)		mtx_lock(&(_sc)->sc_mtx)
 #define	AT91_MCI_UNLOCK(_sc)		mtx_unlock(&(_sc)->sc_mtx)
@@ -259,6 +274,7 @@ at91_mci_getaddr(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 static void
 at91_mci_pdc_disable(struct at91_mci_softc *sc)
 {
+#ifndef __rtems__
 	WR4(sc, PDC_PTCR, PDC_PTCR_TXTDIS | PDC_PTCR_RXTDIS);
 	WR4(sc, PDC_RPR, 0);
 	WR4(sc, PDC_RCR, 0);
@@ -268,6 +284,10 @@ at91_mci_pdc_disable(struct at91_mci_softc *sc)
 	WR4(sc, PDC_TCR, 0);
 	WR4(sc, PDC_TNPR, 0);
 	WR4(sc, PDC_TNCR, 0);
+#else /* __rtems__ */
+	/* On SAMV71 there is no PDC but a DMAC */
+	WR4(sc, MCI_DMA_DMAEN, 0);
+#endif /* __rtems__ */
 }
 
 /*
@@ -289,7 +309,11 @@ static void at91_mci_reset(struct at91_mci_softc *sc)
 	/* save current state */
 
 	imr  = RD4(sc, MCI_IMR);
+#ifndef __rtems__
 	mr   = RD4(sc, MCI_MR) & 0x7fff;
+#else /* __rtems__ */
+	mr   = RD4(sc, MCI_MR);
+#endif /* __rtems__ */
 	sdcr = RD4(sc, MCI_SDCR);
 	dtor = RD4(sc, MCI_DTOR);
 
@@ -323,7 +347,12 @@ at91_mci_init(device_t dev)
 	WR4(sc, MCI_CR, MCI_CR_MCIDIS | MCI_CR_SWRST); /* device into reset */
 	WR4(sc, MCI_IDR, 0xffffffff);		/* Turn off interrupts */
 	WR4(sc, MCI_DTOR, MCI_DTOR_DTOMUL_1M | 1);
+#ifndef __rtems__
 	val = MCI_MR_PDCMODE;
+#else /* __rtems__ */
+	val = 0;
+	val |= MCI_MR_RDPROOF | MCI_MR_WRPROOF;
+#endif /* __rtems__ */
 	val |= 0x34a;				/* PWSDIV = 3; CLKDIV = 74 */
 //	if (sc->sc_cap & CAP_MCI1_REV2XX)
 //		val |= MCI_MR_RDPROOF | MCI_MR_WRPROOF;
@@ -376,6 +405,9 @@ at91_mci_attach(device_t dev)
 	device_t child;
 	int err, i;
 
+#ifdef __rtems__
+	PMC_EnablePeripheral(ID_HSMCI);
+#endif /* __rtems__ */
 	sctx = device_get_sysctl_ctx(dev);
 	soid = device_get_sysctl_tree(dev);
 
@@ -567,7 +599,7 @@ at91_mci_is_mci1rev2xx(void)
 	}
 #else /* __rtems__ */
 	/* Currently only supports the SAM V71 */
-	return 0;
+	return 1;
 #endif /* __rtems__ */
 }
 
@@ -626,6 +658,9 @@ static void
 at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 {
 	uint32_t cmdr, mr;
+#ifdef __rtems__
+	uint32_t blkr;
+#endif /* __rtems__ */
 	struct mmc_data *data;
 
 	sc->curcmd = cmd;
@@ -718,11 +753,22 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 	 * smaller blocks are possible, but never larger.
 	 */
 
+#ifndef __rtems__
 	WR4(sc, PDC_PTCR, PDC_PTCR_RXTDIS | PDC_PTCR_TXTDIS);
 
 	mr = RD4(sc,MCI_MR) & ~MCI_MR_BLKLEN;
 	mr |=  min(data->len, 512) << 16;
 	WR4(sc, MCI_MR, mr | MCI_MR_PDCMODE|MCI_MR_PDCPADV);
+#else /* __rtems__ */
+	blkr = RD4(sc,MCI_BLKR) & ~MCI_BLKR_BLKLEN;
+	blkr = blkr | min(data->len, 512) << 16;
+	WR4(sc, MCI_BLKR, blkr);
+
+	mr = RD4(sc,MCI_MR);
+	WR4(sc, MCI_MR, mr | MCI_MR_PDCPADV);
+
+	WR4(sc, MCI_DMA, MCI_DMA_CHKSIZE_1);
+#endif /* __rtems__ */
 
 	/*
 	 * Set up DMA.
@@ -757,6 +803,7 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 	sc->xfer_offset = 0;
 	sc->bbuf_curidx = 0;
 
+#ifndef __rtems__
 	if (data->flags & (MMC_DATA_READ | MMC_DATA_WRITE)) {
 		uint32_t len;
 		uint32_t remaining = data->len;
@@ -840,6 +887,7 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 		}
 		data->xfer_len = 0; /* XXX what's this? appears to be unused. */
 	}
+#endif /* __rtems__ */
 
 	if (mci_debug)
 		printf("CMDR %x (opcode %d) ARGR %x with data len %d\n",
@@ -847,7 +895,82 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 
 	WR4(sc, MCI_ARGR, cmd->arg);
 	WR4(sc, MCI_CMDR, cmdr);
+#ifndef __rtems__
 	WR4(sc, MCI_IER, MCI_SR_ERROR | MCI_SR_CMDRDY);
+#else /* __rtems__ */
+	if (! (data->flags & (MMC_DATA_READ | MMC_DATA_WRITE))) {
+		WR4(sc, MCI_IER, MCI_SR_ERROR | MCI_SR_CMDRDY);
+	} else {
+		/* Use polled mode */
+		/* FIXME: This kills performance */
+		bus_addr_t paddr;
+		uint32_t len;
+		uint32_t sr;
+		uint32_t *buffer;
+		int err;
+
+		len = min(data->len, 512) / 4;
+
+		if (data->flags & MMC_DATA_READ) {
+			err = bus_dmamap_load(sc->dmatag, sc->bbuf_map[0],
+			    sc->bbuf_vaddr[0], len, at91_mci_getaddr,
+			    &paddr, BUS_DMA_NOWAIT);
+			if (err != 0)
+				panic("IO read dmamap_load failed\n");
+			bus_dmamap_sync(sc->dmatag, sc->bbuf_map[0],
+			    BUS_DMASYNC_PREREAD);
+			buffer = (uint32_t *) paddr;
+
+			while (len > 0) {
+				do {
+					sr = RD4(sc, MCI_SR);
+				} while (
+				    (sr & (MCI_SR_RXRDY | MCI_SR_ERROR)) == 0);
+				if(sr & MCI_SR_RXRDY) {
+					*buffer = RD4(sc, MCI_RDR);
+					++buffer;
+					--len;
+				} else {
+					panic("Error while reading from SD. sr: %08X\n",
+					    sr);
+				}
+			}
+
+			sc->bbuf_len[sc->bbuf_curidx] = data->len;
+
+			at91_mci_read_done(sc, sr);
+		} else {
+			at91_bswap_buf(sc, sc->bbuf_vaddr[0], data->data, len);
+			err = bus_dmamap_load(sc->dmatag, sc->bbuf_map[0],
+			    sc->bbuf_vaddr[0], len, at91_mci_getaddr,
+			    &paddr, BUS_DMA_NOWAIT);
+			if (err != 0)
+				panic("IO write dmamap_load failed\n");
+			bus_dmamap_sync(sc->dmatag, sc->bbuf_map[0],
+			    BUS_DMASYNC_PREWRITE);
+			buffer = (uint32_t *) paddr;
+
+			while (len > 0) {
+				do {
+					sr = RD4(sc, MCI_SR);
+				} while (
+				    (sr & (MCI_SR_TXRDY | MCI_SR_ERROR)) == 0);
+				if(sr & MCI_SR_RXRDY) {
+					WR4(sc, MCI_TDR, *buffer);
+					++buffer;
+					--len;
+				} else {
+					panic("Error while writing to SD. sr: %08X\n",
+					    sr);
+				}
+			}
+
+			sc->bbuf_len[sc->bbuf_curidx] = data->len;
+
+			at91_mci_write_done(sc, sr);
+		}
+	}
+#endif /* __rtems__ */
 }
 
 static void
