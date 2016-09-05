@@ -78,6 +78,7 @@ RTEMS_BSD_DRIVER_USB_MASS;
 #include <libchip/chip.h>
 
 RTEMS_BSD_DRIVER_AT91_MCI0((unsigned long)HSMCI, HSMCI_IRQn);
+RTEMS_BSD_DRIVER_MMC;
 
 #elif defined(LIBBSP_I386_PC386_BSP_H)
 
