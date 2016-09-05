@@ -893,6 +893,9 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 		printf("CMDR %x (opcode %d) ARGR %x with data len %d\n",
 		       cmdr, cmd->opcode, cmd->arg, cmd->data->len);
 
+#ifdef __rtems__
+	WR4(sc, MCI_IDR, 0xFFFFFFFF);
+#endif /* __rtems__ */
 	WR4(sc, MCI_ARGR, cmd->arg);
 	WR4(sc, MCI_CMDR, cmdr);
 #ifndef __rtems__
@@ -911,15 +914,14 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 
 		len = min(data->len, 512) / 4;
 
+		do {
+			sr = RD4(sc, MCI_SR);
+		} while (sr & (MCI_SR_CMDRDY) == 0);
+
+		/* FIXME: Check error bits in the status register. */
+
 		if (data->flags & MMC_DATA_READ) {
-			err = bus_dmamap_load(sc->dmatag, sc->bbuf_map[0],
-			    sc->bbuf_vaddr[0], len, at91_mci_getaddr,
-			    &paddr, BUS_DMA_NOWAIT);
-			if (err != 0)
-				panic("IO read dmamap_load failed\n");
-			bus_dmamap_sync(sc->dmatag, sc->bbuf_map[0],
-			    BUS_DMASYNC_PREREAD);
-			buffer = (uint32_t *) paddr;
+			buffer = sc->bbuf_vaddr[0];
 
 			while (len > 0) {
 				do {
@@ -938,24 +940,19 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 
 			sc->bbuf_len[sc->bbuf_curidx] = data->len;
 
+			do {
+				sr = RD4(sc, MCI_SR);
+			} while ((sr & (MCI_SR_NOTBUSY)) == 0);
 			at91_mci_read_done(sc, sr);
 		} else {
-			at91_bswap_buf(sc, sc->bbuf_vaddr[0], data->data, len);
-			err = bus_dmamap_load(sc->dmatag, sc->bbuf_map[0],
-			    sc->bbuf_vaddr[0], len, at91_mci_getaddr,
-			    &paddr, BUS_DMA_NOWAIT);
-			if (err != 0)
-				panic("IO write dmamap_load failed\n");
-			bus_dmamap_sync(sc->dmatag, sc->bbuf_map[0],
-			    BUS_DMASYNC_PREWRITE);
-			buffer = (uint32_t *) paddr;
+			buffer = sc->bbuf_vaddr[0];
 
 			while (len > 0) {
 				do {
 					sr = RD4(sc, MCI_SR);
 				} while (
 				    (sr & (MCI_SR_TXRDY | MCI_SR_ERROR)) == 0);
-				if(sr & MCI_SR_RXRDY) {
+				if(sr & MCI_SR_TXRDY) {
 					WR4(sc, MCI_TDR, *buffer);
 					++buffer;
 					--len;
@@ -967,6 +964,9 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 
 			sc->bbuf_len[sc->bbuf_curidx] = data->len;
 
+			do {
+				sr = RD4(sc, MCI_SR);
+			} while ((sr & (MCI_SR_NOTBUSY)) == 0);
 			at91_mci_write_done(sc, sr);
 		}
 	}
@@ -1068,8 +1068,10 @@ at91_mci_read_done(struct at91_mci_softc *sc, uint32_t sr)
 	 * operation, otherwise we wait for another ENDRX for the next bufer.
 	 */
 
+#ifndef __rtems__
 	bus_dmamap_sync(sc->dmatag, sc->bbuf_map[curidx], BUS_DMASYNC_POSTREAD);
 	bus_dmamap_unload(sc->dmatag, sc->bbuf_map[curidx]);
+#endif /* __rtems__ */
 
 	at91_bswap_buf(sc, dataptr + sc->xfer_offset, sc->bbuf_vaddr[curidx], len);
 
