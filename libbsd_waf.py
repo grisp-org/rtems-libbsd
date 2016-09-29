@@ -878,6 +878,8 @@ def build(bld):
               'freebsd/sys/dev/re/if_re.c',
               'freebsd/sys/dev/smc/if_smc.c',
               'freebsd/sys/dev/tsec/if_tsec.c',
+              'freebsd/sys/dev/usb/controller/at91dci.c',
+              'freebsd/sys/dev/usb/controller/atmegadci.c',
               'freebsd/sys/dev/usb/controller/dwc_otg.c',
               'freebsd/sys/dev/usb/controller/ehci.c',
               'freebsd/sys/dev/usb/controller/ohci.c',
