@@ -148,6 +148,8 @@ def rtems(mm):
             'pppd/utils.c',
             'sys/dev/usb/controller/ehci_mpc83xx.c',
             'sys/dev/usb/controller/ohci_lpc.c',
+            'sys/dev/usb/controller/athsotg.c',
+            'sys/dev/usb/controller/athsotg_samv.c',
             'sys/dev/usb/controller/dwc_otg_nexus.c',
             'sys/dev/usb/controller/usb_otg_transceiver.c',
             'sys/dev/usb/controller/usb_otg_transceiver_dump.c',
