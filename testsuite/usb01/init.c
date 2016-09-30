@@ -41,6 +41,8 @@
 
 #define TEST_NAME "LIBBSD USB 1"
 
+uintptr_t rtems_bsd_allocator_domain_page_mbuf_size = 512 * 1024;
+
 static rtems_status_code
 media_listener(rtems_media_event event, rtems_media_state state,
     const char *src, const char *dest, void *arg)
