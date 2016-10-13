@@ -125,11 +125,6 @@ struct ats_otg_flags {
 	uint8_t	d_pulled_up:1;
 };
 
-struct ats_otg_profile {
-	struct usb_hw_ep_profile usb;
-	uint16_t max_buffer;
-};
-
 struct ats_otg_chan_state {
 	uint16_t allocated;
 };
@@ -137,7 +132,6 @@ struct ats_otg_chan_state {
 struct ats_otg_softc {
 	struct usb_bus sc_bus;
 	union ats_otg_hub_temp sc_hub_temp;
-	struct ats_otg_profile sc_hw_ep_profile[ATS_OTG_MAX_DEVICE_ENDPOINTS];
 
 	struct usb_device *sc_devices[ATS_OTG_MAX_DEVICES];
 
