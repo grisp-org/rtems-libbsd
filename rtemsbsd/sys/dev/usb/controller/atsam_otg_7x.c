@@ -185,12 +185,15 @@ ats_otg_7x_attach(device_t dev)
 #endif
 
 	err = ats_otg_init(sc);
-	if (!err) {
+
+	if (err == 0) {
 		err = device_probe_and_attach(sc->sc_bus.bdev);
 	}
-	if (err) {
+
+	if (err != 0) {
 		goto error;
 	}
+
 	return (0);
 
 error:
