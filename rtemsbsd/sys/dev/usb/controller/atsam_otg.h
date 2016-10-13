@@ -144,6 +144,7 @@ struct ats_otg_softc {
 	struct resource *sc_io_res;
 	struct resource *sc_fifo_res;
 	struct resource *sc_irq_res;
+	void *sc_intr_hdl;
 
 	bus_space_tag_t sc_io_tag;
 	bus_space_handle_t sc_io_hdl;
