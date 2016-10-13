@@ -230,5 +230,7 @@ static devclass_t ats_otg_7x_devclass;
 
 DRIVER_MODULE(ats_otg_7x, nexus, ats_otg_7x_driver,
     ats_otg_7x_devclass, 0, 0);
+MODULE_DEPEND(ats_otg_7x, usb, 1, 1, 1);
+SYSINIT_DRIVER_REFERENCE(usbus, ats_otg_7x);
 
 #endif /* LIBBSP_ARM_ATSAM_BSP_H */
