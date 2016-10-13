@@ -136,7 +136,20 @@ ats_otg_7x_attach(device_t dev)
 	int err;
 	int rid;
 
+	/* select USB HOST mode */
 	sc->sc_mode = ATS_MODE_HOST;
+
+	/* initialise some bus fields */
+	sc->sc_bus.parent = dev;
+	sc->sc_bus.devices = sc->sc_devices;
+	sc->sc_bus.devices_max = ATS_OTG_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
+
+	/* get all DMA memory */
+	if (usb_bus_mem_alloc_all(&sc->sc_bus,
+	    USB_GET_DMA_TAG(dev), NULL)) {
+		return (ENOMEM);
+	}
 
 	rid = 0;
 	sc->sc_io_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
