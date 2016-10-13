@@ -158,14 +158,12 @@ ats_otg_7x_attach(device_t dev)
 	sc->sc_fifo_tag = rman_get_bustag(sc->sc_fifo_res);
 	sc->sc_fifo_hdl = rman_get_bushandle(sc->sc_fifo_res);
 
-#if 0
 	rid = 0;
 	sc->sc_irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
 	   RF_ACTIVE);
 	if (sc->sc_irq_res == NULL) {
 		goto error;
 	}
-#endif
 
 	sc->sc_bus.bdev = device_add_child(dev, "usbus", -1);
 	if (sc->sc_bus.bdev == NULL) {
@@ -175,14 +173,12 @@ ats_otg_7x_attach(device_t dev)
 
 	ats_otg_7x_on(sc);
 
-#if 0
 	err = bus_setup_intr(dev, sc->sc_irq_res, INTR_TYPE_TTY | INTR_MPSAFE,
 	    ats_otg_filter_interrupt, ats_otg_interrupt, sc, &sc->sc_intr_hdl);
 	if (err) {
 		sc->sc_intr_hdl = NULL;
 		goto error;
 	}
-#endif
 
 	err = ats_otg_init(sc);
 
