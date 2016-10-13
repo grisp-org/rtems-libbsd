@@ -175,17 +175,17 @@ ats_otg_7x_attach(device_t dev)
 
 	err = bus_setup_intr(dev, sc->sc_irq_res, INTR_TYPE_TTY | INTR_MPSAFE,
 	    ats_otg_filter_interrupt, ats_otg_interrupt, sc, &sc->sc_intr_hdl);
-	if (err) {
+	if (err != 0) {
 		sc->sc_intr_hdl = NULL;
 		goto error;
 	}
 
 	err = ats_otg_init(sc);
-
-	if (err == 0) {
-		err = device_probe_and_attach(sc->sc_bus.bdev);
+	if (err != 0) {
+		goto error;
 	}
 
+	err = device_probe_and_attach(sc->sc_bus.bdev);
 	if (err != 0) {
 		goto error;
 	}
