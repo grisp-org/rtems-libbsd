@@ -301,24 +301,28 @@ extern "C" {
 #endif /* RTEMS_BSD_DRIVER_TSEC */
 
 /*
- * Atmel USB High-Speed Interface (USBHS) for SAM E/V/S controllers.
+ * Atmel USB High-Speed Interface (USBHS) for SAM 7X controllers.
  */
-#if !defined(RTEMS_BSD_DRIVER_ATHSOTG_SAMV)
-  #define RTEMS_BSD_DRIVER_ATHSOTG_SAMV(_base, _irq)                    \
-    static const rtems_bsd_device_resource athsotg_samv_res[] = {       \
+#if !defined(RTEMS_BSD_DRIVER_ATSAM_OTG_7X)
+  #define RTEMS_BSD_DRIVER_ATSAM_OTG_7X(_regs, _fifo, _irq)             \
+    static const rtems_bsd_device_resource ats_otg_7x_res[] = {         \
       {                                                                 \
         .type = RTEMS_BSD_RES_MEMORY,                                   \
         .start_request = 0,                                             \
-        .start_actual = (_base)                                         \
+        .start_actual = (_regs)                                         \
+      }, {                                                              \
+        .type = RTEMS_BSD_RES_MEMORY,                                   \
+        .start_request = 0,                                             \
+        .start_actual = (_fifo)                                         \
       }, {                                                              \
         .type = RTEMS_BSD_RES_IRQ,                                      \
         .start_request = 0,                                             \
         .start_actual = (_irq)                                          \
       }                                                                 \
     };                                                                  \
-    RTEMS_BSD_DEFINE_NEXUS_DEVICE(athsotg_samv, 0,                      \
-      RTEMS_ARRAY_SIZE(athsotg_samv_res), &athsotg_samv_res[0])
-#endif /* RTEMS_BSD_DRIVER_DWC0 */
+    RTEMS_BSD_DEFINE_NEXUS_DEVICE(ats_otg_7x, 0,                        \
+      RTEMS_ARRAY_SIZE(ats_otg_7x_res), &ats_otg_7x_res[0])
+#endif /* RTEMS_BSD_DRIVER_ATSAM_OTG_7X */
 
 /*
  * Intel's Legacy EM driver.
