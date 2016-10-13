@@ -136,6 +136,8 @@ ats_otg_7x_attach(device_t dev)
 	int err;
 	int rid;
 
+	sc->sc_mode = ATS_MODE_HOST;
+
 	rid = 0;
 	sc->sc_io_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
 	    RF_ACTIVE);
