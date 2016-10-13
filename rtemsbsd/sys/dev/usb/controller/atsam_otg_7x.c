@@ -29,6 +29,12 @@
 
 #ifdef LIBBSP_ARM_ATSAM_BSP_H
 
+/* Disable some BSP provided header files visible via <libchip/chip.h> */
+#define	USBHS_H
+#define	_SAME70_USBHS_COMPONENT_
+#define	_SAMS70_USBHS_COMPONENT_
+#define	_SAMV71_USBHS_COMPONENT_
+
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
@@ -58,7 +64,8 @@ __FBSDID("$FreeBSD$");
 
 #include <dev/usb/usb_controller.h>
 #include <dev/usb/usb_bus.h>
-#include <dev/usb/controller/athsotg.h>
+#include <dev/usb/controller/atsam_otg.h>
+#include <dev/usb/controller/atsam_otg_reg.h>
 
 #include <sys/rman.h>
 
@@ -66,16 +73,16 @@ __FBSDID("$FreeBSD$");
 
 #include <libchip/chip.h>
 
-static device_probe_t athsotg_samv_probe;
-static device_attach_t athsotg_samv_attach;
-static device_detach_t athsotg_samv_detach;
+static device_probe_t ats_otg_7x_probe;
+static device_attach_t ats_otg_7x_attach;
+static device_detach_t ats_otg_7x_detach;
 
 #define PINS_VBUS_EN { PIO_PC16, PIOC, ID_PIOC, PIO_OUTPUT_1, PIO_DEFAULT }
 
 static const Pin pin_vbus_en[] = { PINS_VBUS_EN };
 
 static void
-athsotg_samv_on(struct athsotg_softc *sc)
+ats_otg_7x_on(struct ats_otg_softc *sc)
 {
 	uint32_t reg;
 
@@ -88,34 +95,34 @@ athsotg_samv_on(struct athsotg_softc *sc)
 	PIO_Set(pin_vbus_en);
 
 	/* Set host mode */
-	reg = ATHSOTG_READ_4(sc, ATHSOTG_CTRL);
-	reg &= ~ATHSOTG_CTRL_UIMOD_DEVICE;
-	ATHSOTG_WRITE_4(sc, ATHSOTG_CTRL, reg);
+	reg = ATS_OTG_READ_4(sc, USBHS_CTRL);
+	reg &= ~USBHS_CTRL_UMOD;
+	ATS_OTG_WRITE_4(sc, USBHS_CTRL, reg);
 
 	/* Enable USB */
-	reg = ATHSOTG_READ_4(sc, ATHSOTG_CTRL);
-	reg |= ATHSOTG_CTRL_USBE;
-	ATHSOTG_WRITE_4(sc, ATHSOTG_CTRL, reg);
+	reg = ATS_OTG_READ_4(sc, USBHS_CTRL);
+	reg |= USBHS_CTRL_USBE;
+	ATS_OTG_WRITE_4(sc, USBHS_CTRL, reg);
 
 	/* Unfreeze USB clock */
-	reg = ATHSOTG_READ_4(sc, ATHSOTG_CTRL);
-	reg &= ~ATHSOTG_CTRL_FRZCLK;
-	ATHSOTG_WRITE_4(sc, ATHSOTG_CTRL, reg);
+	reg = ATS_OTG_READ_4(sc, USBHS_CTRL);
+	reg &= ~USBHS_CTRL_FRZCLK;
+	ATS_OTG_WRITE_4(sc, USBHS_CTRL, reg);
 
 	/* Check USB clock */
-	while ((ATHSOTG_READ_4(sc, ATHSOTG_SR) & ATHSOTG_SR_CLKUSABLE) == 0) {
+	while ((ATS_OTG_READ_4(sc, USBHS_SR) & USBHS_SR_CLKUSABLE) == 0) {
 		/* Wait */
 	}
 
 	/* Clear all interrupts */
-	ATHSOTG_WRITE_4(sc, ATHSOTG_HSTICR, 0xffffffffu);
+	ATS_OTG_WRITE_4(sc, USBHS_HSTICR, 0xffffffffu);
 
 	/* Power on USB devices */
 	PIO_Clear(pin_vbus_en);
 }
 
 static int
-athsotg_samv_probe(device_t dev)
+ats_otg_7x_probe(device_t dev)
 {
 
 	device_set_desc(dev, "Atmel USB High-Speed Interface (USBHS)");
@@ -123,9 +130,9 @@ athsotg_samv_probe(device_t dev)
 }
 
 static int
-athsotg_samv_attach(device_t dev)
+ats_otg_7x_attach(device_t dev)
 {
-	struct athsotg_softc *sc = device_get_softc(dev);
+	struct ats_otg_softc *sc = device_get_softc(dev);
 	int err;
 	int rid;
 
@@ -139,28 +146,43 @@ athsotg_samv_attach(device_t dev)
 	sc->sc_io_tag = rman_get_bustag(sc->sc_io_res);
 	sc->sc_io_hdl = rman_get_bushandle(sc->sc_io_res);
 
+	rid = 1;
+	sc->sc_fifo_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
+	    RF_ACTIVE);
+	if (sc->sc_fifo_res == NULL) {
+		err = ENOMEM;
+		goto error;
+	}
+	sc->sc_fifo_tag = rman_get_bustag(sc->sc_fifo_res);
+	sc->sc_fifo_hdl = rman_get_bushandle(sc->sc_fifo_res);
+
+#if 0
 	rid = 0;
 	sc->sc_irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
 	   RF_ACTIVE);
 	if (sc->sc_irq_res == NULL) {
 		goto error;
 	}
+#endif
+
 	sc->sc_bus.bdev = device_add_child(dev, "usbus", -1);
 	if (sc->sc_bus.bdev == NULL) {
 		goto error;
 	}
 	device_set_ivars(sc->sc_bus.bdev, &sc->sc_bus);
 
-	athsotg_samv_on(sc);
+	ats_otg_7x_on(sc);
 
+#if 0
 	err = bus_setup_intr(dev, sc->sc_irq_res, INTR_TYPE_TTY | INTR_MPSAFE,
-	    NULL, athsotg_interrupt, sc, &sc->sc_intr_hdl);
+	    ats_otg_filter_interrupt, ats_otg_interrupt, sc, &sc->sc_intr_hdl);
 	if (err) {
 		sc->sc_intr_hdl = NULL;
 		goto error;
 	}
+#endif
 
-	err = athsotg_init(sc);
+	err = ats_otg_init(sc);
 	if (!err) {
 		err = device_probe_and_attach(sc->sc_bus.bdev);
 	}
@@ -170,22 +192,22 @@ athsotg_samv_attach(device_t dev)
 	return (0);
 
 error:
-	athsotg_samv_detach(dev);
+	ats_otg_7x_detach(dev);
 	return (ENXIO);
 }
 
 static int
-athsotg_samv_detach(device_t dev)
+ats_otg_7x_detach(device_t dev)
 {
 
-	panic("athsotg_samv_detach");
+	panic("ats_otg_7x_detach");
 }
 
-static device_method_t athsotg_samv_methods[] = {
+static device_method_t ats_otg_7x_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe, athsotg_samv_probe),
-	DEVMETHOD(device_attach, athsotg_samv_attach),
-	DEVMETHOD(device_detach, athsotg_samv_detach),
+	DEVMETHOD(device_probe, ats_otg_7x_probe),
+	DEVMETHOD(device_attach, ats_otg_7x_attach),
+	DEVMETHOD(device_detach, ats_otg_7x_detach),
 	DEVMETHOD(device_suspend, bus_generic_suspend),
 	DEVMETHOD(device_resume, bus_generic_resume),
 	DEVMETHOD(device_shutdown, bus_generic_shutdown),
@@ -193,15 +215,15 @@ static device_method_t athsotg_samv_methods[] = {
 	DEVMETHOD_END
 };
 
-static driver_t athsotg_samv_driver = {
-	.name = "athsotg_samv",
-	.methods = athsotg_samv_methods,
-	.size = sizeof(struct athsotg_softc),
+static driver_t ats_otg_7x_driver = {
+	.name = "ats_otg_7x",
+	.methods = ats_otg_7x_methods,
+	.size = sizeof(struct ats_otg_softc),
 };
 
-static devclass_t athsotg_samv_devclass;
+static devclass_t ats_otg_7x_devclass;
 
-DRIVER_MODULE(athsotg_samv, nexus, athsotg_samv_driver,
-    athsotg_samv_devclass, 0, 0);
+DRIVER_MODULE(ats_otg_7x, nexus, ats_otg_7x_driver,
+    ats_otg_7x_devclass, 0, 0);
 
 #endif /* LIBBSP_ARM_ATSAM_BSP_H */
