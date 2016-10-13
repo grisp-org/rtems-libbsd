@@ -1335,7 +1335,7 @@ ats_otg_interrupt(void *arg)
 
 	DPRINTFN(14, "HSTISR=0x%08x\n", temp);
 
-	if (temp & USBHS_HSTISR_DCONN) {
+	if (temp & (USBHS_HSTISR_DCONN | USBHS_HSTISR_HWUP)) {
 		sc->sc_flags.status_device_mode = 0;
 		sc->sc_flags.status_bus_reset = 1;
 		sc->sc_flags.change_connect = 1;
