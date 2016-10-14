@@ -960,8 +960,8 @@ start_in:
 	    USBHS_HSTPIPIER_PERR |
 	    USBHS_HSTPIPIER_RXIN);
 
-	/* start generating an IN packet */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPINRQ(td->channel), 1);
+	/* start generating one IN packet */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPINRQ(td->channel), 0);
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel), USBHS_HSTPIPIDR_PFREEZ);
 	return (1);			/* not complete */
 }
