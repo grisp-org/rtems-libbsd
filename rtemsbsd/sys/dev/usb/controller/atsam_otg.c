@@ -687,11 +687,12 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 				return (1);	/* busy - out of memory */
 			if (td->ep_type == UE_CONTROL) {
 				y = 3;	/* 64-bytes */
-			} else
+			} else {
 				for (y = 0; y != 8; y++) {
 					if (td->max_packet_size <= (1U << (y + 3)))
 						break;
 				}
+			}
 			/* enable host pipe */
 			temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
 			temp |= USBHS_HSTPIP_PEN(x);
