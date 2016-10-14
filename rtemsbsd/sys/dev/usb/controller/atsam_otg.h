@@ -39,13 +39,35 @@
 #define	ATS_OTG_WRITE_4(sc, reg, data)	\
     bus_space_write_4((sc)->sc_io_tag, (sc)->sc_io_hdl, reg, data)
 
-#define	ATS_OTG_READ_FIFO_1(sc, ep, data, len)	\
-    bus_space_read_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl, \
-	(sc)->sc_fifo_offset[(ep)], (data), (len))
+#define	ATS_OTG_READ_FIFO_1(sc, ep, data, len)	do {			\
+    if ((uintptr_t)(data) & 3) {					\
+	bus_space_read_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    (sc)->sc_fifo_offset[(ep)], (data), (len));			\
+    } else {								\
+	bus_space_read_multi_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    (sc)->sc_fifo_offset[(ep)], (data), (len) / 4);		\
+	if ((len) & 3) {						\
+	    bus_space_read_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl, \
+	        (sc)->sc_fifo_offset[(ep)], ((uint8_t *)(data)) +	\
+		((len) & ~3), (len) & 3);				\
+	}								\
+   }									\
+} while (0)
 
-#define	ATS_OTG_WRITE_FIFO_1(sc, ep, data, len)	\
-    bus_space_write_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl, \
-	(sc)->sc_fifo_offset[(ep)], (data), (len))
+#define	ATS_OTG_WRITE_FIFO_1(sc, ep, data, len)	do {			\
+    if ((uintptr_t)(data) & 3) {					\
+	bus_space_write_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    (sc)->sc_fifo_offset[(ep)], (data), (len));			\
+    } else {								\
+	bus_space_write_multi_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    (sc)->sc_fifo_offset[(ep)], (data), (len) / 4);		\
+	if ((len) & 3) {						\
+	    bus_space_write_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl, \
+	        (sc)->sc_fifo_offset[(ep)], ((uint8_t *)(data)) +	\
+		((len) & ~3), (len) & 3);				\
+	}								\
+   }									\
+} while (0)
 
 struct ats_otg_td;
 struct ats_otg_softc;

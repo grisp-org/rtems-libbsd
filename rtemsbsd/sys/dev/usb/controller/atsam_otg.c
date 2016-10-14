@@ -355,7 +355,7 @@ ats_otg_set_address(struct ats_otg_softc *sc, uint8_t addr)
 static uint8_t
 ats_otg_device_setup_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
-	struct usb_device_request req;
+	struct usb_device_request req __aligned(4);
 	uint32_t temp;
 	uint16_t count;
 
@@ -846,7 +846,7 @@ ats_otg_host_channel_free(struct ats_otg_softc *sc, struct ats_otg_td *td)
 static uint8_t
 ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
-	struct usb_device_request req;
+	struct usb_device_request req __aligned(4);
 	uint32_t temp;
 
 	/* try to allocate a free channel */
