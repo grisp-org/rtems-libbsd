@@ -893,8 +893,9 @@ ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	td->offset += sizeof(req);
 	td->remainder -= sizeof(req);
 
-	/* allocate FIFO bank */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel), USBHS_HSTPIPIDR_FIFOCON);
+	/* allocate FIFO bank and start token generation */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel),
+	    USBHS_HSTPIPIDR_FIFOCON | USBHS_HSTPIPIDR_PFREEZ);
 
 	return (1);			/* busy */
 }
@@ -1073,11 +1074,9 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 		td->remainder -= buf_res.length;
 	}
 
-	/* allocate FIFO bank */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel), USBHS_HSTPIPIDR_FIFOCON);
-
-	/* unfreeze host channel */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel), USBHS_HSTPIPIDR_PFREEZ);
+	/* allocate FIFO bank and start token generation */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel),
+	    USBHS_HSTPIPIDR_FIFOCON | USBHS_HSTPIPIDR_PFREEZ);
 
 	return (1);			/* not complete */
 }
