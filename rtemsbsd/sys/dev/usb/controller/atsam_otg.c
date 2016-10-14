@@ -680,6 +680,7 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 
 			/* allocate FIFO */
 			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPCFG(x),
+			    USBHS_HSTPIPCFG_INTFRQ(td->ep_type == UE_INTERRUPT ? 1 : 0) |
 			    USBHS_HSTPIPCFG_PSIZE(y) |
 			    USBHS_HSTPIPCFG_PBK_1 |
 			    USBHS_HSTPIPCFG_ALLOC |
