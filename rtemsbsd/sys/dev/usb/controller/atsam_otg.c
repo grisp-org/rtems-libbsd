@@ -2008,8 +2008,6 @@ ats_otg_init(struct ats_otg_softc *sc)
 	/* wait for host to detect disconnect */
 	usb_pause_mtx(&sc->sc_bus.bus_mtx, hz / 32);
 
-	ATS_OTG_WRITE_4(sc, USBHS_SFR, USBHS_SFR_VBUSRQS);
-
 	switch (sc->sc_mode) {
 	case ATS_MODE_HOST:
 		ATS_OTG_WRITE_4(sc, USBHS_CTRL,
@@ -2030,6 +2028,8 @@ ats_otg_init(struct ats_otg_softc *sc)
 		sc->sc_flags.status_device_mode = 1;
 		break;
 	}
+
+	ATS_OTG_WRITE_4(sc, USBHS_SFR, USBHS_SFR_VBUSRQS);
 
 	/* wait a little bit for block to enable */
 	usb_pause_mtx(&sc->sc_bus.bus_mtx, hz / 128);
