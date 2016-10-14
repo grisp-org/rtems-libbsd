@@ -146,7 +146,6 @@ struct ats_otg_flags {
 	uint8_t	status_low_speed:1;	/* set if Low Speed is selected */
 	uint8_t	status_device_mode:1;	/* set if device mode */
 	uint8_t	self_powered:1;
-	uint8_t	clocks_off:1;
 	uint8_t	port_powered:1;
 	uint8_t	port_enabled:1;
 	uint8_t	port_over_current:1;
