@@ -2895,7 +2895,7 @@ ats_otg_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
 				    "not supported\n");
 				return;
 			}
-			if (UGETW(edesc->wMaxPacketSize) >= 512) {
+			if (UGETW(edesc->wMaxPacketSize) > 512) {
 				/* not supported */
 				DPRINTFN(-1, "wMaxPacketSize(%u) must be less than "
 				    "or equal to 512 bytes\n",
@@ -2903,6 +2903,7 @@ ats_otg_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
 				return;
 			}
 			if (udev->parent_hub != NULL &&
+			    udev->parent_hub->parent_hub != NULL &&
 			    udev->speed != udev->parent_hub->speed) {
 				/* not supported */
 				DPRINTFN(-1, "USB split transactions are "
