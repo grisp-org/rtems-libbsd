@@ -502,7 +502,7 @@
 
 /* General Status Control Register */
 #define	USBHS_CTRL	0x0800
-#define	USBHS_CTRL_UMOD			(1U << 25)
+#define	USBHS_CTRL_UIMOD		(1U << 25)
 #define	USBHS_CTRL_UID			(1U << 24)
 #define	USBHS_CTRL_USBE			(1U << 15)
 #define	USBHS_CTRL_FRZCLK		(1U << 14)

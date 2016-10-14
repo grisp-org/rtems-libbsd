@@ -2009,7 +2009,7 @@ ats_otg_init(struct ats_otg_softc *sc)
 	default:
 		ATS_OTG_WRITE_4(sc, USBHS_CTRL,
 		    USBHS_CTRL_VBUSHWC | USBHS_CTRL_USBE |
-		    USBHS_CTRL_UMOD);
+		    USBHS_CTRL_UIMOD);
 
 		/* try to set mode early on */
 		sc->sc_flags.status_device_mode = 1;
