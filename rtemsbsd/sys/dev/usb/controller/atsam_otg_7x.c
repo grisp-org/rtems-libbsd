@@ -96,7 +96,7 @@ ats_otg_7x_on(struct ats_otg_softc *sc)
 
 	/* Set host mode */
 	reg = ATS_OTG_READ_4(sc, USBHS_CTRL);
-	reg &= ~USBHS_CTRL_UMOD;
+	reg &= ~USBHS_CTRL_UIMOD;
 	ATS_OTG_WRITE_4(sc, USBHS_CTRL, reg);
 
 	/* Enable USB */
