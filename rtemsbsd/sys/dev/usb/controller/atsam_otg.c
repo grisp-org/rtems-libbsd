@@ -2655,14 +2655,14 @@ tr_handle_set_port_feature:
 			temp = ATS_OTG_READ_4(sc, USBHS_HSTCTRL);
 			temp &= ~(USBHS_HSTCTRL_SOFE | USBHS_HSTCTRL_RESET |
 			    USBHS_HSTCTRL_RESUME);
-			temp |= USBHS_HSTCTRL_RESET;
-			ATS_OTG_WRITE_4(sc, USBHS_HSTCTRL, temp);
+			ATS_OTG_WRITE_4(sc, USBHS_HSTCTRL,
+			    temp | USBHS_HSTCTRL_RESET);
 
 			/* Wait 62.5ms for reset to complete */
 			usb_pause_mtx(&sc->sc_bus.bus_mtx, hz / 16);
 
-			temp ^= USBHS_HSTCTRL_SOFE | USBHS_HSTCTRL_RESET;
-			ATS_OTG_WRITE_4(sc, USBHS_HSTCTRL, temp);
+			ATS_OTG_WRITE_4(sc, USBHS_HSTCTRL,
+			    temp | USBHS_HSTCTRL_SOFE);
 
 			/* Wait 62.5ms for reset to complete */
 			usb_pause_mtx(&sc->sc_bus.bus_mtx, hz / 16);
