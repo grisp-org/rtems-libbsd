@@ -94,28 +94,7 @@ ats_otg_7x_on(struct ats_otg_softc *sc)
 	/* Power off USB devices */
 	PIO_Set(pin_vbus_en);
 
-	/* Set host mode */
-	reg = ATS_OTG_READ_4(sc, USBHS_CTRL);
-	reg &= ~USBHS_CTRL_UIMOD;
-	ATS_OTG_WRITE_4(sc, USBHS_CTRL, reg);
-
-	/* Enable USB */
-	reg = ATS_OTG_READ_4(sc, USBHS_CTRL);
-	reg |= USBHS_CTRL_USBE;
-	ATS_OTG_WRITE_4(sc, USBHS_CTRL, reg);
-
-	/* Unfreeze USB clock */
-	reg = ATS_OTG_READ_4(sc, USBHS_CTRL);
-	reg &= ~USBHS_CTRL_FRZCLK;
-	ATS_OTG_WRITE_4(sc, USBHS_CTRL, reg);
-
-	/* Check USB clock */
-	while ((ATS_OTG_READ_4(sc, USBHS_SR) & USBHS_SR_CLKUSABLE) == 0) {
-		/* Wait */
-	}
-
-	/* Clear all interrupts */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTICR, 0xffffffffu);
+	DELAY(50000);
 
 	/* Power on USB devices */
 	PIO_Clear(pin_vbus_en);
