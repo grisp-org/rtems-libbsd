@@ -106,7 +106,6 @@ SYSCTL_INT(_hw_usb_atsam_otg, OID_AUTO, debug, CTLFLAG_RWTUN,
     USBHS_DEVIMR_SUSP)
 
 #define	ATS_OTG_HSTIMR_THREAD_IRQ ( \
-   USBHS_HSTIMR_HWUP	| \
    USBHS_HSTIMR_RXRSM	| \
    USBHS_HSTIMR_RSMED	| \
    USBHS_HSTIMR_RST	| \
@@ -1301,7 +1300,7 @@ ats_otg_interrupt(void *arg)
 
 	DPRINTFN(14, "HSTISR=0x%08x\n", temp);
 
-	if (temp & (USBHS_HSTISR_DCONN | USBHS_HSTISR_HWUP)) {
+	if (temp & USBHS_HSTISR_DCONN) {
 		sc->sc_flags.status_device_mode = 0;
 		sc->sc_flags.status_bus_reset = 1;
 		sc->sc_flags.change_connect = 1;
