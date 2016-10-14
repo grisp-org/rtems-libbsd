@@ -1809,7 +1809,7 @@ ats_otg_device_done(struct usb_xfer *xfer, usb_error_t error)
 	if (xfer->flags_int.usb_mode == USB_MODE_DEVICE) {
 		/* disable interrupts */
 		ATS_OTG_WRITE_4(sc, USBHS_DEVIDR,
-		    USBHS_DEVIDR_PEP_MASK(xfer->ep_no & UE_ADDR));
+		    USBHS_DEVIDR_PEP_MASK(xfer->endpoint & UE_ADDR));
 	} else {
 		struct ats_otg_td *td;
 
