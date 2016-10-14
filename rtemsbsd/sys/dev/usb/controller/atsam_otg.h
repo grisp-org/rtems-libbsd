@@ -144,7 +144,6 @@ struct ats_otg_flags {
 	uint8_t	status_bus_reset:1;	/* set if reset complete */
 	uint8_t	status_high_speed:1;	/* set if High Speed is selected */
 	uint8_t	status_low_speed:1;	/* set if Low Speed is selected */
-	uint8_t	status_device_mode:1;	/* set if device mode */
 	uint8_t	self_powered:1;
 	uint8_t	port_powered:1;
 	uint8_t	port_enabled:1;
@@ -183,7 +182,6 @@ struct ats_otg_softc {
 	uint8_t	sc_mode;		/* mode of operation */
 #define	ATS_MODE_DEVICE 0	/* device mode */
 #define	ATS_MODE_HOST 1		/* host mode */
-#define	ATS_MODE_OTG  2		/* both modes */
 
 	uint8_t	sc_hub_idata[1];
 

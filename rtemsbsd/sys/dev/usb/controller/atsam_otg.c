@@ -221,11 +221,10 @@ ats_otg_resume_irq(struct ats_otg_softc *sc)
 		sc->sc_flags.status_suspend = 0;
 		sc->sc_flags.change_suspend = 1;
 
-		if (sc->sc_flags.status_device_mode) {
-			/* Disable resume and enable suspend interrupt */
-			ATS_OTG_WRITE_4(sc, USBHS_DEVIDR, USBHS_DEVIDR_WAKEUP);
-			ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_SUSP);
-		}
+		/* Disable resume and enable suspend interrupt */
+		ATS_OTG_WRITE_4(sc, USBHS_DEVIDR, USBHS_DEVIDR_WAKEUP);
+		ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_SUSP);
+
 		/* complete root HUB interrupt endpoint */
 		ats_otg_root_intr(sc);
 	}
@@ -239,11 +238,10 @@ ats_otg_suspend_irq(struct ats_otg_softc *sc)
 		sc->sc_flags.status_suspend = 1;
 		sc->sc_flags.change_suspend = 1;
 
-		if (sc->sc_flags.status_device_mode) {
-			/* Disable suspend and enable resume interrupt */
-			ATS_OTG_WRITE_4(sc, USBHS_DEVIDR, USBHS_DEVIDR_SUSP);
-			ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_WAKEUP);
-		}
+		/* Disable suspend and enable resume interrupt */
+		ATS_OTG_WRITE_4(sc, USBHS_DEVIDR, USBHS_DEVIDR_SUSP);
+		ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_WAKEUP);
+
 		/* complete root HUB interrupt endpoint */
 		ats_otg_root_intr(sc);
 	}
@@ -259,7 +257,7 @@ ats_otg_wakeup_peer(struct ats_otg_softc *sc)
 
 	DPRINTFN(5, "Remote wakeup\n");
 
-	if (sc->sc_flags.status_device_mode) {
+	if (sc->sc_mode == ATS_MODE_DEVICE) {
 
 		temp = ATS_OTG_READ_4(sc, USBHS_DEVCTRL) |
 		    USBHS_DEVCTRL_RMWKUP;
@@ -1143,7 +1141,7 @@ ats_otg_interrupt_poll_locked(struct ats_otg_softc *sc)
 {
 	struct usb_xfer *xfer;
 
-	if (sc->sc_flags.status_device_mode == 0) {
+	if (sc->sc_mode == ATS_MODE_HOST) {
 		/* Update host transfer schedule */
 		ats_otg_update_host_transfer_schedule_locked(sc);
 	}
@@ -1246,7 +1244,6 @@ ats_otg_interrupt(void *arg)
 		DPRINTFN(5, "end of reset\n");
 
 		/* set correct state */
-		sc->sc_flags.status_device_mode = 1;
 		sc->sc_flags.status_bus_reset = 1;
 		sc->sc_flags.status_suspend = 0;
 		sc->sc_flags.change_suspend = 0;
@@ -1301,14 +1298,12 @@ ats_otg_interrupt(void *arg)
 	DPRINTFN(14, "HSTISR=0x%08x\n", temp);
 
 	if (temp & USBHS_HSTISR_DCONN) {
-		sc->sc_flags.status_device_mode = 0;
 		sc->sc_flags.status_bus_reset = 1;
 		sc->sc_flags.change_connect = 1;
 
 		/* complete root HUB interrupt endpoint */
 		ats_otg_root_intr(sc);
 	} else if (temp & USBHS_HSTISR_DDISC) {
-		sc->sc_flags.status_device_mode = 0;
 		sc->sc_flags.status_bus_reset = 0;
 		sc->sc_flags.change_connect = 1;
 		sc->sc_flags.port_enabled = 0;
@@ -1320,7 +1315,6 @@ ats_otg_interrupt(void *arg)
 		uint32_t speed;
 
 		sc->sc_flags.status_bus_reset = 1;
-		sc->sc_flags.status_device_mode = 0;
 		sc->sc_flags.status_high_speed = 0;
 		sc->sc_flags.status_low_speed = 0;
 		sc->sc_flags.port_enabled = 1;
@@ -1335,7 +1329,9 @@ ats_otg_interrupt(void *arg)
 		/* complete root HUB interrupt endpoint */
 		ats_otg_root_intr(sc);
 	}
-	if (sc->sc_flags.status_device_mode == 0 &&
+
+	/* track suspend and resume */
+	if (sc->sc_mode == ATS_MODE_HOST &&
 	    sc->sc_flags.status_bus_reset != 0) {
 		uint32_t sof;
 
@@ -1960,17 +1956,11 @@ ats_otg_init(struct ats_otg_softc *sc)
 	case ATS_MODE_HOST:
 		ATS_OTG_WRITE_4(sc, USBHS_CTRL,
 		    USBHS_CTRL_VBUSHWC | USBHS_CTRL_USBE);
-
-		/* try to set mode early on */
-		sc->sc_flags.status_device_mode = 0;
 		break;
 	default:
 		ATS_OTG_WRITE_4(sc, USBHS_CTRL,
 		    USBHS_CTRL_VBUSHWC | USBHS_CTRL_USBE |
 		    USBHS_CTRL_UIMOD);
-
-		/* try to set mode early on */
-		sc->sc_flags.status_device_mode = 1;
 		break;
 	}
 
@@ -2572,7 +2562,7 @@ tr_handle_set_port_feature:
 		break;
 
 	case UHF_PORT_SUSPEND:
-		if (sc->sc_flags.status_device_mode == 0) {
+		if (sc->sc_mode == ATS_MODE_HOST) {
 			uint32_t temp;
 
 			/* set suspend BIT */
@@ -2587,7 +2577,7 @@ tr_handle_set_port_feature:
 		break;
 
 	case UHF_PORT_RESET:
-		if (sc->sc_flags.status_device_mode == 0) {
+		if (sc->sc_mode == ATS_MODE_HOST) {
 			uint32_t temp;
 
 			DPRINTF("PORT RESET\n");
@@ -2643,7 +2633,7 @@ tr_handle_get_port_status:
 
 	/* Select Device Side Mode */
 
-	if (sc->sc_flags.status_device_mode)
+	if (sc->sc_mode == ATS_MODE_DEVICE)
 		value = UPS_PORT_MODE_DEVICE;
 	else
 		value = 0;
