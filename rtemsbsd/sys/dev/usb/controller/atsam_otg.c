@@ -2015,6 +2015,9 @@ ats_otg_init(struct ats_otg_softc *sc)
 		ATS_OTG_WRITE_4(sc, USBHS_CTRL,
 		    USBHS_CTRL_VBUSHWC | USBHS_CTRL_USBE);
 
+		/* disable detach */
+		ATS_OTG_WRITE_4(sc, USBHS_DEVCTRL, 0);
+
 		/* try to set mode early on */
 		sc->sc_flags.status_device_mode = 0;
 		break;
