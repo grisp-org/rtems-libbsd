@@ -682,8 +682,8 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 		if (sc->sc_chan_state[x].key == 0) {
 			uint8_t y;
 
-			if ((ATS_OTG_MAX_HOST_MEMORY - sc->sc_fifo_offset[x]) <
-			    td->max_packet_size || td->max_packet_size > 1024)
+			if ((sc->sc_host_memory_used + td->max_packet_size) >
+			    ATS_OTG_MAX_HOST_MEMORY || td->max_packet_size > 1024)
 				return (1);	/* busy - out of memory */
 			if (td->ep_type == UE_CONTROL) {
 				y = 3;	/* 64-bytes */
@@ -710,11 +710,8 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 			    USBHS_HSTPIPCFG_PEPNUM(td->ep_no) |
 			    USBHS_HSTPIPCFG_PTYPE(td->ep_type));
 
-			/* update next FIFO offset, if any */
-			if (x != (ATS_OTG_MAX_HOST_CHANNELS - 1)) {
-				sc->sc_fifo_offset[x + 1] =
-				    sc->sc_fifo_offset[x] + (1U << (y + 3));
-			}
+			/* update host memory used */
+			sc->sc_host_memory_used += td->max_packet_size;
 			break;
 		}
 	}
@@ -1922,33 +1919,28 @@ ats_otg_device_state_change(struct usb_device *udev)
 static void
 ats_otg_init_fifo(struct ats_otg_softc *sc, uint8_t mode)
 {
-	uint32_t temp;
 	uint8_t x;
 
 	if (mode == ATS_MODE_HOST) {
 		/* reset channel state */
 		USB_BUS_SPIN_LOCK(&sc->sc_bus);
 		memset(sc->sc_chan_state, 0, sizeof(sc->sc_chan_state));
-		memset(sc->sc_fifo_offset, 0, sizeof(sc->sc_fifo_offset));
+		sc->sc_host_memory_used = 0;
 		USB_BUS_SPIN_UNLOCK(&sc->sc_bus);
 	} else {
-		temp = 0;
 		for (x = 0; x != ATS_OTG_MAX_DEVICE_ENDPOINTS; x++) {
-			sc->sc_fifo_offset[x] = temp;
 			if (x == 0 || x >= ATS_OTG_MAX_DEVICE_HS_EP) {
 				ATS_OTG_WRITE_4(sc, USBHS_DEVEPTCFG(x),
 				    USBHS_DEVEPTCFG_EPSIZE_64 | USBHS_DEVEPTCFG_EPBK_1);
 				ATS_OTG_WRITE_4(sc, USBHS_DEVEPTCFG(x),
 				    USBHS_DEVEPTCFG_EPSIZE_64 | USBHS_DEVEPTCFG_EPBK_1 |
 				    USBHS_DEVEPTCFG_ALLOC);
-				temp += 64;
 			} else {
 				ATS_OTG_WRITE_4(sc, USBHS_DEVEPTCFG(x),
 				    USBHS_DEVEPTCFG_EPSIZE_512 | USBHS_DEVEPTCFG_EPBK_1);
 				ATS_OTG_WRITE_4(sc, USBHS_DEVEPTCFG(x),
 				    USBHS_DEVEPTCFG_EPSIZE_512 | USBHS_DEVEPTCFG_EPBK_1 |
 				    USBHS_DEVEPTCFG_ALLOC);
-				temp += 512;
 			}
 		}
 	}
