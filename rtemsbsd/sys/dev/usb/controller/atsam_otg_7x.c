@@ -84,7 +84,6 @@ static const Pin pin_vbus_en[] = { PINS_VBUS_EN };
 static void
 ats_otg_7x_on(struct ats_otg_softc *sc)
 {
-	uint32_t reg;
 
 	sysclk_enable_usb();
 	PMC_EnablePeripheral(ID_USBHS);
