@@ -33,6 +33,7 @@
 #define	ATS_OTG_MAX_DEVICE_ENDPOINTS 10
 #define	ATS_OTG_MAX_DEVICE_HS_EP 8
 #define	ATS_OTG_FRAME_MASK 0x7FFU
+#define	ATS_OTG_FIFO_OFFSET(n)	((n) << 15)
 
 #define	ATS_OTG_READ_4(sc, reg) \
     bus_space_read_4((sc)->sc_io_tag, (sc)->sc_io_hdl, reg)
@@ -42,31 +43,31 @@
 
 #define	ATS_OTG_READ_FIFO_1(sc, ep, data, len)	do {			\
     if ((uintptr_t)(data) & 3) {					\
-	bus_space_read_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    (sc)->sc_fifo_offset[(ep)], (data), (len));			\
+	bus_space_read_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    ATS_OTG_FIFO_OFFSET(ep), (data), (len));			\
     } else {								\
-	bus_space_read_multi_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    (sc)->sc_fifo_offset[(ep)], (data), (len) / 4);		\
-	if ((len) & 3) {						\
-	    bus_space_read_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl, \
-	        (sc)->sc_fifo_offset[(ep)], ((uint8_t *)(data)) +	\
-		((len) & ~3), (len) & 3);				\
-	}								\
+	bus_space_read_region_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    ATS_OTG_FIFO_OFFSET(ep), (data), (len) / 4);		\
+	if (((len) & 3) == 0)						\
+		break;							\
+	bus_space_read_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    ATS_OTG_FIFO_OFFSET(ep) + ((len) & ~3),			\
+	    ((uint8_t *)(data)) + ((len) & ~3), (len) & 3);		\
    }									\
 } while (0)
 
 #define	ATS_OTG_WRITE_FIFO_1(sc, ep, data, len)	do {			\
     if ((uintptr_t)(data) & 3) {					\
-	bus_space_write_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    (sc)->sc_fifo_offset[(ep)], (data), (len));			\
+	bus_space_write_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    ATS_OTG_FIFO_OFFSET(ep), (data), (len));			\
     } else {								\
-	bus_space_write_multi_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    (sc)->sc_fifo_offset[(ep)], (data), (len) / 4);		\
-	if ((len) & 3) {						\
-	    bus_space_write_multi_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl, \
-	        (sc)->sc_fifo_offset[(ep)], ((uint8_t *)(data)) +	\
-		((len) & ~3), (len) & 3);				\
-	}								\
+	bus_space_write_region_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    ATS_OTG_FIFO_OFFSET(ep), (data), (len) / 4);		\
+	if (((len) & 3) == 0)						\
+		break;							\
+	bus_space_write_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
+	    ATS_OTG_FIFO_OFFSET(ep) + ((len) & ~3),			\
+	    ((uint8_t *)(data)) + ((len) & ~3), (len) & 3);		\
    }									\
 } while (0)
 
@@ -168,11 +169,9 @@ struct ats_otg_softc {
 	bus_space_tag_t sc_fifo_tag;
 	bus_space_handle_t sc_fifo_hdl;
 
-	uint32_t sc_fifo_offset[MAX(ATS_OTG_MAX_HOST_CHANNELS,
-		ATS_OTG_MAX_DEVICE_ENDPOINTS)];
-
 	struct ats_otg_chan_state sc_chan_state[ATS_OTG_MAX_HOST_CHANNELS];
 	uint32_t sc_xfer_complete;
+	uint32_t sc_host_memory_used;
 
 	uint8_t	sc_rt_addr;		/* root HUB address */
 	uint8_t	sc_dv_addr;		/* temporary device address */
