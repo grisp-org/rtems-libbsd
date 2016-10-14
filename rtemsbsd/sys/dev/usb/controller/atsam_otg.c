@@ -1324,7 +1324,6 @@ ats_otg_interrupt(void *arg)
 		sc->sc_flags.status_device_mode = 0;
 		sc->sc_flags.status_high_speed = 0;
 		sc->sc_flags.status_low_speed = 0;
-		sc->sc_flags.change_enabled = 1;
 		sc->sc_flags.port_enabled = 1;
 
 		/* figure out enumeration speed */
