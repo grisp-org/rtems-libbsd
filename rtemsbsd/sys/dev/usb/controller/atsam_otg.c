@@ -705,7 +705,7 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 			    USBHS_HSTPIPCFG_PTYPE(td->ep_type));
 
 			/* update next FIFO offset, if any */
-			if (x != (ATS_OTG_MAX_CHANNEL - 1)) {
+			if (x != (ATS_OTG_MAX_HOST_CHANNELS - 1)) {
 				sc->sc_fifo_offset[x + 1] =
 				    sc->sc_fifo_offset[x] + (1U << (y + 3));
 			}
@@ -830,7 +830,7 @@ ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(x), USBHS_HSTPIPICR_TXSTP);
 
 	/* enable interrupts */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(td->channel),
 	    USBHS_HSTPIPIER_RXSTALLED |
 	    USBHS_HSTPIPIER_PERR |
 	    USBHS_HSTPIPIER_TXSTP);
@@ -944,7 +944,7 @@ start_in:
 	td->did_nak = 1;
 
 	/* enable interrupts */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(td->channel),
 	    USBHS_HSTPIPIER_RXSTALLED |
 	    USBHS_HSTPIPIER_PERR |
 	    USBHS_HSTPIPIER_RXIN);
@@ -1028,7 +1028,7 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(x), USBHS_HSTPIPICR_TXOUT);
 
 	/* enable interrupts */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(td->channel),
 	    USBHS_HSTPIPIER_RXSTALLED |
 	    USBHS_HSTPIPIER_PERR |
 	    USBHS_HSTPIPIER_TXOUT);
