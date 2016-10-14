@@ -28,7 +28,8 @@
 #define	__ATSAM_OTG_H__
 
 #define	ATS_OTG_MAX_DEVICES MIN(USB_MAX_DEVICES, 32)
-#define	ATS_OTG_MAX_HOST_CHANNELS 8	/* NOTE: HW supports 9 */
+#define	ATS_OTG_MAX_HOST_MEMORY 4096	/* bytes */
+#define	ATS_OTG_MAX_HOST_CHANNELS 9
 #define	ATS_OTG_MAX_DEVICE_ENDPOINTS 10
 #define	ATS_OTG_MAX_DEVICE_HS_EP 8
 #define	ATS_OTG_FRAME_MASK 0x7FFU
@@ -81,11 +82,11 @@ struct ats_otg_td {
 	uint32_t offset;
 	uint32_t remainder;
 	uint16_t max_packet_size;	/* packet_size */
-	uint8_t	max_packet_count;	/* packet_count */
 	uint8_t	errcnt;
 	uint8_t	ep_no;
 	uint8_t	ep_type;
 	uint8_t	dev_addr;
+	uint8_t	dev_index;
 	uint8_t	channel;
 	uint8_t	error_any:1;
 	uint8_t	error_stall:1;
@@ -148,7 +149,7 @@ struct ats_otg_flags {
 };
 
 struct ats_otg_chan_state {
-	uint16_t allocated;
+	uint32_t key;
 };
 
 struct ats_otg_softc {

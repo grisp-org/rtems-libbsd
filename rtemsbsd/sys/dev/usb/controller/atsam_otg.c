@@ -655,7 +655,7 @@ not_complete:
 
 static uint8_t
 ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
-    uint8_t ep_dir)
+    uint32_t ep_token)
 {
 	uint32_t temp;
 	uint8_t x;
@@ -667,140 +667,71 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 	if (ATS_OTG_PC2UDEV(td->pc)->flags.self_suspended != 0)
 		return (1);		/* busy - cannot transfer data */
 
-	for (x = 0; x != ATS_OTG_MAX_HOST_CHANNELS; x++) {
-		/* check if channel is allocated */
-		if (sc->sc_chan_state[x].allocated != 0)
-			continue;
+	/* compute key */
+	temp = td->dev_index | (td->ep_no << 8) | (td->ep_type << 16);
+	if (td->ep_type != UE_CONTROL && td->ep_dir != 0)
+		temp |= 0x8000;
 
-		/* grab channel */
-		sc->sc_chan_state[x].allocated = 1;
-		td->channel = x;
-		break;
+	for (x = 0; x != ATS_OTG_MAX_HOST_CHANNELS; x++) {
+		/* check if key matches */
+		if (sc->sc_chan_state[x].key == temp)
+			break;
+		/* check if we should allocate a new host pipe */
+		if (sc->sc_chan_state[x].key == 0) {
+			uint8_t y;
+
+			if ((ATS_OTG_MAX_HOST_MEMORY - sc->sc_fifo_offset[x]) <
+			    td->max_packet_size || td->max_packet_size > 1024)
+				return (1);	/* busy - out of memory */
+			if (td->ep_type == UE_CONTROL) {
+				y = 3;	/* 64-bytes */
+			} else
+				for (y = 0; y != 8; y++) {
+					if (td->max_packet_size <= (1U << (y + 3)))
+						break;
+				}
+			/* enable host pipe */
+			temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
+			temp |= USBHS_HSTPIP_PEN(x);
+			ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp);
+
+			/* allocate FIFO */
+			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPCFG(x),
+			    USBHS_HSTPIPCFG_PSIZE(y) |
+			    USBHS_HSTPIPCFG_PBK_1 |
+			    USBHS_HSTPIPCFG_ALLOC |
+			    ep_token |
+			    USBHS_HSTPIPCFG_PEPNUM(td->ep_no) |
+			    USBHS_HSTPIPCFG_PTYPE(td->ep_type));
+
+			/* update next FIFO offset, if any */
+			if (x != (ATS_OTG_MAX_CHANNEL - 1)) {
+				sc->sc_fifo_offset[x + 1] =
+				    sc->sc_fifo_offset[x] + (1U << (y + 3));
+			}
+			break;
+		}
 	}
 	if (x == ATS_OTG_MAX_HOST_CHANNELS)
-		return (1);		/* busy */
+		return (1);		/* busy - out of channels */
 
-	/* enable and reset host channel */
-	temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
-	temp |= USBHS_HSTPIP_PEN(x);
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp);
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp | USBHS_HSTPIP_PRST(x));
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp);
-
-	/* get current configuration */
-	temp = ATS_OTG_READ_4(sc, USBHS_HSTPIPCFG(x)) &
-	    ~(USBHS_HSTPIPCFG_PTOKEN(-1U) |
-	    USBHS_HSTPIPCFG_PEPNUM(-1U) |
-	    USBHS_HSTPIPCFG_PTYPE(-1U));
-
-	temp |= USBHS_HSTPIPCFG_PEPNUM(td->ep_no);
-
-	/* write endpoint number */
+	/* update token, if any */
+	temp = ATS_OTG_READ_4(sc, USBHS_HSTPIPCFG(x));
+	temp &= ~USBHS_HSTPIPCFG_PTOKEN(-1U);
+	temp |= ep_token;
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPCFG(x), temp);
 
-	switch (td->ep_type) {
-	case UE_CONTROL:
-		if (td->toggle != 0 || td->set_toggle != 0) {
-			td->toggle = 1;
-			if (ep_dir) {
-				temp |= USBHS_HSTPIPCFG_PTOKEN_IN |
-				    USBHS_HSTPIPCFG_PTYPE(UE_CONTROL);
-				/* enable interrupts */
-				ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-				    USBHS_HSTPIPIER_RXSTALLED |
-				    USBHS_HSTPIPIER_PERR |
-				    USBHS_HSTPIPIER_RXIN);
-			} else {
-				temp |= USBHS_HSTPIPCFG_PTOKEN_OUT |
-				    USBHS_HSTPIPCFG_PTYPE(UE_CONTROL);
-				/* enable interrupts */
-				ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-				    USBHS_HSTPIPIER_RXSTALLED |
-				    USBHS_HSTPIPIER_PERR |
-				    USBHS_HSTPIPIER_TXOUT);
-			}
-		} else {
-			temp |= USBHS_HSTPIPCFG_PTOKEN_SETUP |
-			    USBHS_HSTPIPCFG_PTYPE(UE_CONTROL);
-			/* enable interrupts */
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-			    USBHS_HSTPIPIER_RXSTALLED |
-			    USBHS_HSTPIPIER_PERR |
-			    USBHS_HSTPIPIER_TXSTP);
-		}
-		break;
-	case UE_BULK:
-		if (ep_dir) {
-			temp |= USBHS_HSTPIPCFG_PTOKEN_IN |
-			    USBHS_HSTPIPCFG_PTYPE(UE_CONTROL);
-			/* enable interrupts */
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-			    USBHS_HSTPIPIER_RXSTALLED |
-			    USBHS_HSTPIPIER_PERR |
-			    USBHS_HSTPIPIER_RXIN);
-		} else {
-			temp |= USBHS_HSTPIPCFG_PTOKEN_OUT |
-			    USBHS_HSTPIPCFG_PTYPE(UE_CONTROL);
-			/* enable interrupts */
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-			    USBHS_HSTPIPIER_RXSTALLED |
-			    USBHS_HSTPIPIER_PERR |
-			    USBHS_HSTPIPIER_TXOUT);
-		}
-		break;
-	case UE_INTERRUPT:
-		if (ep_dir) {
-			temp |= USBHS_HSTPIPCFG_PTOKEN_IN |
-			    USBHS_HSTPIPCFG_PTYPE(UE_INTERRUPT);
-			/* enable interrupts */
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-			    USBHS_HSTPIPIER_RXSTALLED |
-			    USBHS_HSTPIPIER_PERR |
-			    USBHS_HSTPIPIER_RXIN);
-		} else {
-			temp |= USBHS_HSTPIPCFG_PTOKEN_OUT |
-			    USBHS_HSTPIPCFG_PTYPE(UE_INTERRUPT);
-			/* enable interrupts */
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-			    USBHS_HSTPIPIER_RXSTALLED |
-			    USBHS_HSTPIPIER_PERR |
-			    USBHS_HSTPIPIER_TXOUT);
-		}
-		break;
-	default:
-		if (ep_dir) {
-			temp |= USBHS_HSTPIPCFG_PTOKEN_IN |
-			    USBHS_HSTPIPCFG_PTYPE(UE_ISOCHRONOUS);
-			/* enable interrupts */
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-			    USBHS_HSTPIPIER_SHORTPACKET |
-			    USBHS_HSTPIPIER_PERR |
-			    USBHS_HSTPIPIER_RXIN);
-		} else {
-			temp |= USBHS_HSTPIPCFG_PTOKEN_OUT |
-			    USBHS_HSTPIPCFG_PTYPE(UE_ISOCHRONOUS);
-			/* enable interrupts */
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
-			    USBHS_HSTPIPIER_PERR |
-			    USBHS_HSTPIPIER_TXOUT);
-		}
-		break;
-	}
+	/* reset data toggle, if any */
+	if (td->ep_type == UE_BULK && td->toggle == 0)
+		ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x), USBHS_HSTPIPIER_RSTDT);
 
-	/* full configuration */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPCFG(x), temp);
-
-	/* set host address */
+	/* update host address, if any */
 	temp = ATS_OTG_READ_4(sc, USBHS_HSTADDR(x / 4));
 	temp &= ~USBHS_HSTADDR_ADDR(-1U, x % 4);
 	temp |= USBHS_HSTADDR_ADDR(td->dev_addr, x % 4);
 	ATS_OTG_WRITE_4(sc, USBHS_HSTADDR(x / 4), temp);
 
-	/* clear data toggle */
-	if (td->toggle == 0)
-		ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x), USBHS_HSTPIPIER_RSTDT);
-
-	/* enable interrupts */
+	/* enable host pipe interrupts */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTIER, USBHS_HSTIER_PEP(x));
 
 	return (0);			/* allocated */
@@ -809,7 +740,6 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 static void
 ats_otg_host_channel_free(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
-	uint32_t temp;
 	uint8_t x;
 
 	if (td->channel == ATS_OTG_MAX_HOST_CHANNELS)
@@ -821,15 +751,8 @@ ats_otg_host_channel_free(struct ats_otg_softc *sc, struct ats_otg_td *td)
 
 	DPRINTF("CH=%d\n", x);
 
-	sc->sc_chan_state[x].allocated = 0;
-
 	/* disable token generation */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x), USBHS_HSTPIPIER_PFREEZ);
-
-	/* disable host channel */
-	temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
-	temp &= ~(USBHS_HSTPIP_PEN(x) | USBHS_HSTPIP_PRST(x));
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp);
 
 	/* disable interrupts */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTIDR, USBHS_HSTIDR_PEP(x));
@@ -860,7 +783,8 @@ ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 
 	/* try to allocate a free channel */
 	if (td->channel == ATS_OTG_MAX_HOST_CHANNELS) {
-		td->channel = ats_otg_host_channel_alloc(sc, td, 0);
+		td->channel = ats_otg_host_channel_alloc(sc, td,
+		    USBHS_HSTPIPCFG_PTOKEN_SETUP);
 		if (td->channel == ATS_OTG_MAX_HOST_CHANNELS)
 			return (1);	/* busy */
 	}
@@ -902,6 +826,15 @@ ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	td->offset += sizeof(req);
 	td->remainder -= sizeof(req);
 
+	/* avoid extra interrupt */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(x), USBHS_HSTPIPICR_TXSTP);
+
+	/* enable interrupts */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
+	    USBHS_HSTPIPIER_RXSTALLED |
+	    USBHS_HSTPIPIER_PERR |
+	    USBHS_HSTPIPIER_TXSTP);
+
 	/* allocate FIFO bank and start token generation */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel),
 	    USBHS_HSTPIPIDR_FIFOCON | USBHS_HSTPIPIDR_PFREEZ);
@@ -919,7 +852,8 @@ ats_otg_host_data_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 
 	/* try to allocate a free channel */
 	if (td->channel == ATS_OTG_MAX_HOST_CHANNELS) {
-		td->channel = ats_otg_host_channel_alloc(sc, td, 1);
+		td->channel = ats_otg_host_channel_alloc(sc, td,
+		    USBHS_HSTPIPCFG_PTOKEN_IN);
 		if (td->channel == ATS_OTG_MAX_HOST_CHANNELS)
 			return (1);	/* busy */
 	}
@@ -1009,6 +943,12 @@ start_in:
 	/* only do it once */
 	td->did_nak = 1;
 
+	/* enable interrupts */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
+	    USBHS_HSTPIPIER_RXSTALLED |
+	    USBHS_HSTPIPIER_PERR |
+	    USBHS_HSTPIPIER_RXIN);
+
 	/* start generating an IN packet */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPINRQ(td->channel), 1);
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel), USBHS_HSTPIPIDR_PFREEZ);
@@ -1024,7 +964,8 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 
 	/* try to allocate a free channel */
 	if (td->channel == ATS_OTG_MAX_HOST_CHANNELS) {
-		td->channel = ats_otg_host_channel_alloc(sc, td, 0);
+		td->channel = ats_otg_host_channel_alloc(sc, td,
+		    USBHS_HSTPIPCFG_PTOKEN_OUT);
 		if (td->channel == ATS_OTG_MAX_HOST_CHANNELS)
 			return (1);	/* busy */
 	}
@@ -1082,6 +1023,15 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 		td->offset += buf_res.length;
 		td->remainder -= buf_res.length;
 	}
+
+	/* avoid extra interrupt */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(x), USBHS_HSTPIPICR_TXOUT);
+
+	/* enable interrupts */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
+	    USBHS_HSTPIPIER_RXSTALLED |
+	    USBHS_HSTPIPIER_PERR |
+	    USBHS_HSTPIPIER_TXOUT);
 
 	/* allocate FIFO bank and start token generation */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(td->channel),
@@ -1960,14 +1910,11 @@ ats_otg_init_fifo(struct ats_otg_softc *sc, uint8_t mode)
 	uint8_t x;
 
 	if (mode == ATS_MODE_HOST) {
-		for (x = 0; x != ATS_OTG_MAX_HOST_CHANNELS; x++) {
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPCFG(x),
-			    USBHS_HSTPIPCFG_PSIZE_512 | USBHS_HSTPIPCFG_PBK_1);
-			ATS_OTG_WRITE_4(sc, USBHS_HSTPIPCFG(x),
-			    USBHS_HSTPIPCFG_PSIZE_512 | USBHS_HSTPIPCFG_PBK_1 |
-			    USBHS_HSTPIPCFG_ALLOC);
-			sc->sc_fifo_offset[x] = 512 * x;
-		}
+		/* reset channel state */
+		USB_BUS_SPIN_LOCK(&sc->sc_bus);
+		memset(sc->sc_chan_state, 0, sizeof(sc->sc_chan_state));
+		memset(sc->sc_fifo_offset, 0, sizeof(sc->sc_fifo_offset));
+		USB_BUS_SPIN_UNLOCK(&sc->sc_bus);
 	} else {
 		temp = 0;
 		for (x = 0; x != ATS_OTG_MAX_DEVICE_ENDPOINTS; x++) {
@@ -2845,13 +2792,10 @@ ats_otg_xfer_setup(struct usb_setup_params *parm)
 
 			/* init TD */
 			td->max_packet_size = xfer->max_packet_size;
-			td->max_packet_count = xfer->max_packet_count;
-			/* range check */
-			if (td->max_packet_count == 0 || td->max_packet_count > 3)
-				td->max_packet_count = 1;
 			td->ep_no = ep_no;
 			td->ep_type = ep_type;
 			td->dev_addr = xfer->address;
+			td->dev_index = parm->udev->device_index;
 			td->obj_next = last_obj;
 
 			last_obj = td;
