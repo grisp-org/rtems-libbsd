@@ -711,7 +711,7 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 			    USBHS_HSTPIPCFG_PTYPE(td->ep_type));
 
 			/* update host memory used */
-			sc->sc_host_memory_used += td->max_packet_size;
+			sc->sc_host_memory_used += (1U << (y + 3));
 			break;
 		}
 	}
