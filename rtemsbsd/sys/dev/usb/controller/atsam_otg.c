@@ -356,6 +356,7 @@ static uint8_t
 ats_otg_device_setup_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
 	struct usb_device_request req __aligned(4);
+	uint32_t fifo_off;
 	uint32_t temp;
 	uint16_t count;
 
@@ -385,8 +386,11 @@ ats_otg_device_setup_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 		    "length, %d bytes\n", count);
 		goto not_complete;
 	}
-	/* receive data */
-	ATS_OTG_READ_FIFO_1(sc, td->ep_no, (void *)&req, sizeof(req));
+	/* get FIFO offset */
+	fifo_off = ATS_OTG_FIFO_OFFSET(td->ep_no);
+
+	/* read data from FIFO */
+	ATS_OTG_READ_FIFO_1(sc, fifo_off, (void *)&req, sizeof(req));
 
 	/* copy data into real buffer */
 	usbd_copy_in(td->pc, 0, &req, sizeof(req));
@@ -437,6 +441,7 @@ static uint8_t
 ats_otg_device_data_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
 	struct usb_page_search buf_res;
+	uint32_t fifo_off;
 	uint32_t temp;
 	uint16_t count;
 	uint8_t to;
@@ -493,6 +498,9 @@ repeat:
 		td->error_any = 1;
 		return (0);		/* we are complete */
 	}
+	/* get FIFO offset */
+	fifo_off = ATS_OTG_FIFO_OFFSET(td->ep_no);
+
 	while (count > 0) {
 		usbd_get_page(td->pc, td->offset, &buf_res);
 
@@ -500,8 +508,9 @@ repeat:
 		if (buf_res.length > count) {
 			buf_res.length = count;
 		}
-		/* receive data */
-		ATS_OTG_READ_FIFO_1(sc, td->ep_no, buf_res.buffer, buf_res.length);
+		/* read data from FIFO */
+		ATS_OTG_READ_FIFO_1(sc, fifo_off,
+		    buf_res.buffer, buf_res.length);
 
 		/* update counters */
 		count -= buf_res.length;
@@ -541,6 +550,7 @@ ats_otg_device_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
 	struct usb_page_search buf_res;
 	uint32_t temp;
+	uint32_t fifo_off;
 	uint16_t count;
 	uint8_t to;
 
@@ -570,6 +580,10 @@ repeat:
 		td->short_pkt = 1;
 		count = td->remainder;
 	}
+
+	/* get FIFO offset */
+	fifo_off = ATS_OTG_FIFO_OFFSET(td->ep_no);
+
 	while (count > 0) {
 
 		usbd_get_page(td->pc, td->offset, &buf_res);
@@ -578,8 +592,9 @@ repeat:
 		if (buf_res.length > count) {
 			buf_res.length = count;
 		}
-		/* transmit data */
-		ATS_OTG_WRITE_FIFO_1(sc, td->ep_no, buf_res.buffer, buf_res.length);
+		/* write data to FIFO */
+		ATS_OTG_WRITE_FIFO_1(sc, fifo_off,
+		    buf_res.buffer, buf_res.length);
 
 		/* update counters */
 		count -= buf_res.length;
@@ -799,6 +814,7 @@ static uint8_t
 ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
 	struct usb_device_request req __aligned(4);
+	uint32_t fifo_off;
 	uint32_t temp;
 
 	/* try to allocate a free channel */
@@ -837,7 +853,11 @@ ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	/* copy data into real buffer */
 	usbd_copy_out(td->pc, 0, &req, sizeof(req));
 
-	ATS_OTG_WRITE_FIFO_1(sc, td->channel, (void *)&req, sizeof(req));
+	/* get FIFO offset */
+	fifo_off = ATS_OTG_FIFO_OFFSET(td->channel);
+
+	/* write setup packet to FIFO */
+	ATS_OTG_WRITE_FIFO_1(sc, fifo_off, (void *)&req, sizeof(req));
 
 	/* update offset and remainder */
 	td->offset += sizeof(req);
@@ -864,6 +884,7 @@ static uint8_t
 ats_otg_host_data_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
 	struct usb_page_search buf_res;
+	uint32_t fifo_off;
 	uint32_t temp;
 	uint16_t count;
 	uint8_t got_short;
@@ -923,6 +944,9 @@ ats_otg_host_data_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 		ats_otg_host_channel_free(sc, td);
 		return (0);		/* we are complete */
 	}
+	/* get FIFO offset */
+	fifo_off = ATS_OTG_FIFO_OFFSET(td->channel);
+
 	while (count > 0) {
 		usbd_get_page(td->pc, td->offset, &buf_res);
 
@@ -930,8 +954,9 @@ ats_otg_host_data_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 		if (buf_res.length > count) {
 			buf_res.length = count;
 		}
-		/* receive data */
-		ATS_OTG_READ_FIFO_1(sc, td->channel, buf_res.buffer, buf_res.length);
+		/* read data from FIFO */
+		ATS_OTG_READ_FIFO_1(sc, fifo_off,
+		    buf_res.buffer, buf_res.length);
 
 		/* update counters */
 		count -= buf_res.length;
@@ -974,6 +999,7 @@ static uint8_t
 ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 {
 	struct usb_page_search buf_res;
+	uint32_t fifo_off;
 	uint32_t temp;
 	uint16_t count;
 
@@ -1019,6 +1045,10 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 		td->short_pkt = 1;
 		count = td->remainder;
 	}
+
+	/* get FIFO offset */
+	fifo_off = ATS_OTG_FIFO_OFFSET(td->channel);
+
 	while (count > 0) {
 
 		usbd_get_page(td->pc, td->offset, &buf_res);
@@ -1027,8 +1057,9 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 		if (buf_res.length > count) {
 			buf_res.length = count;
 		}
-		/* transmit data */
-		ATS_OTG_WRITE_FIFO_1(sc, td->channel, buf_res.buffer, buf_res.length);
+		/* write data to FIFO */
+		ATS_OTG_WRITE_FIFO_1(sc, fifo_off,
+		    buf_res.buffer, buf_res.length);
 
 		/* update counters */
 		count -= buf_res.length;
