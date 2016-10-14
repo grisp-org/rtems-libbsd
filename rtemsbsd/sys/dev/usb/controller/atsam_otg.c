@@ -182,39 +182,6 @@ ats_otg_get_hw_ep_profile(struct usb_device *udev,
 }
 
 static void
-ats_otg_clocks_on(struct ats_otg_softc *sc)
-{
-	if (sc->sc_flags.clocks_off &&
-	    sc->sc_flags.port_powered) {
-		uint32_t temp;
-
-		DPRINTFN(5, "\n");
-
-		temp = ATS_OTG_READ_4(sc, USBHS_CTRL) &
-		    ~USBHS_CTRL_FRZCLK;
-		ATS_OTG_WRITE_4(sc, USBHS_CTRL, temp);
-
-		sc->sc_flags.clocks_off = 0;
-	}
-}
-
-static void
-ats_otg_clocks_off(struct ats_otg_softc *sc)
-{
-	if (!sc->sc_flags.clocks_off) {
-		uint32_t temp;
-
-		DPRINTFN(5, "\n");
-
-		temp = ATS_OTG_READ_4(sc, USBHS_CTRL) |
-		    USBHS_CTRL_FRZCLK;
-		ATS_OTG_WRITE_4(sc, USBHS_CTRL, temp);
-
-		sc->sc_flags.clocks_off = 1;
-	}
-}
-
-static void
 ats_otg_pull_up(struct ats_otg_softc *sc)
 {
 	/* pullup D+, if possible */
@@ -292,8 +259,6 @@ ats_otg_wakeup_peer(struct ats_otg_softc *sc)
 		return;
 
 	DPRINTFN(5, "Remote wakeup\n");
-
-	ats_otg_clocks_on(sc);
 
 	if (sc->sc_flags.status_device_mode) {
 
@@ -2023,9 +1988,6 @@ ats_otg_init(struct ats_otg_softc *sc)
 	ATS_OTG_WRITE_4(sc, USBHS_DEVIER, ATS_OTG_DEVIMR_THREAD_IRQ);
 	ATS_OTG_WRITE_4(sc, USBHS_HSTIER, ATS_OTG_HSTIMR_THREAD_IRQ);
 
-	/* turn off clocks */
-	ats_otg_clocks_off(sc);
-
 	USB_BUS_UNLOCK(&sc->sc_bus);
 
 	/* catch any lost interrupts */
@@ -2040,10 +2002,7 @@ ats_otg_uninit(struct ats_otg_softc *sc)
 {
 	USB_BUS_LOCK(&sc->sc_bus);
 
-	/* disable USB block */
-	ATS_OTG_WRITE_4(sc, USBHS_CTRL, USBHS_CTRL_VBUSHWC);
-
-	/* enable interrupts */
+	/* disable interrupts */
 	ATS_OTG_WRITE_4(sc, USBHS_DEVIDR, -1U);
 	ATS_OTG_WRITE_4(sc, USBHS_HSTIDR, -1U);
 
@@ -2055,7 +2014,10 @@ ats_otg_uninit(struct ats_otg_softc *sc)
 	sc->sc_flags.change_connect = 1;
 
 	ats_otg_pull_down(sc);
-	ats_otg_clocks_off(sc);
+
+	/* disable USB block */
+	ATS_OTG_WRITE_4(sc, USBHS_CTRL,
+	    USBHS_CTRL_VBUSHWC | USBHS_CTRL_FRZCLK);
 
 	USB_BUS_UNLOCK(&sc->sc_bus);
 }
@@ -2587,7 +2549,6 @@ tr_handle_clear_port_feature:
 	case UHF_PORT_POWER:
 		sc->sc_flags.port_powered = 0;
 		ats_otg_pull_down(sc);
-		ats_otg_clocks_off(sc);
 		break;
 
 	case UHF_C_PORT_CONNECTION:
@@ -2684,11 +2645,6 @@ tr_handle_get_port_status:
 
 	if (index != 1)
 		goto tr_stalled;
-
-	if (sc->sc_flags.status_suspend)
-		ats_otg_clocks_off(sc);
-	else
-		ats_otg_clocks_on(sc);
 
 	/* Select Device Side Mode */
 
