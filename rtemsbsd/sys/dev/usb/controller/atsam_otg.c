@@ -428,6 +428,8 @@ not_complete:
 	    USBHS_DEVEPTIER_RXSTP);
 	ATS_OTG_WRITE_4(sc, USBHS_DEVEPTIDR(0),
 	    USBHS_DEVEPTIDR_TXIN | USBHS_DEVEPTIDR_RXOUT);
+	ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_PEP_MASK(0));
+
 	return (1);			/* not complete */
 }
 
@@ -530,6 +532,7 @@ not_complete:
 	    USBHS_DEVEPTIER_RXSTP | USBHS_DEVEPTIMR_RXOUT);
 	ATS_OTG_WRITE_4(sc, USBHS_DEVEPTIDR(td->ep_no),
 	    USBHS_DEVEPTIDR_TXIN);
+	ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_PEP_MASK(td->ep_no));
 	return (1);			/* not complete */
 }
 
@@ -606,6 +609,7 @@ not_complete:
 	    USBHS_DEVEPTIER_RXSTP | USBHS_DEVEPTIER_TXIN);
 	ATS_OTG_WRITE_4(sc, USBHS_DEVEPTIDR(td->ep_no),
 	    USBHS_DEVEPTIDR_RXOUT);
+	ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_PEP_MASK(td->ep_no));
 	return (1);			/* not complete */
 }
 
@@ -645,6 +649,7 @@ not_complete:
 	    USBHS_DEVEPTIER_RXSTP | USBHS_DEVEPTIER_TXIN);
 	ATS_OTG_WRITE_4(sc, USBHS_DEVEPTIDR(td->ep_no),
 	    USBHS_DEVEPTIDR_RXOUT);
+	ATS_OTG_WRITE_4(sc, USBHS_DEVIER, USBHS_DEVIER_PEP_MASK(td->ep_no));
 	return (1);			/* not complete */
 }
 
@@ -795,6 +800,9 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 	if (td->toggle == 0)
 		ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x), USBHS_HSTPIPIER_RSTDT);
 
+	/* enable interrupts */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTIER, USBHS_HSTIER_PEP(x));
+
 	return (0);			/* allocated */
 }
 
@@ -824,6 +832,7 @@ ats_otg_host_channel_free(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp);
 
 	/* disable interrupts */
+	ATS_OTG_WRITE_4(sc, USBHS_HSTIDR, USBHS_HSTIDR_PEP(x));
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIDR(x),
 	    USBHS_HSTPIPIDR_NBUSYBK |
 	    USBHS_HSTPIPIDR_SHORTPACKET |
@@ -1798,7 +1807,9 @@ ats_otg_device_done(struct usb_xfer *xfer, usb_error_t error)
 	USB_BUS_SPIN_LOCK(&sc->sc_bus);
 
 	if (xfer->flags_int.usb_mode == USB_MODE_DEVICE) {
-		/* Interrupts are cleared by the interrupt handler */
+		/* disable interrupts */
+		ATS_OTG_WRITE_4(sc, USBHS_DEVIDR,
+		    USBHS_DEVIDR_PEP_MASK(xfer->ep_no & UE_ADDR));
 	} else {
 		struct ats_otg_td *td;
 
