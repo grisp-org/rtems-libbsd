@@ -669,8 +669,10 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 
 	/* compute key */
 	temp = td->dev_index | (td->ep_no << 8) | (td->ep_type << 16);
-	if (td->ep_type != UE_CONTROL && td->ep_dir != 0)
+	if (td->ep_type != UE_CONTROL &&
+	    ep_token == USBHS_HSTPIPCFG_PTOKEN_IN) {
 		temp |= 0x8000;
+	}
 
 	for (x = 0; x != ATS_OTG_MAX_HOST_CHANNELS; x++) {
 		/* check if key matches */
@@ -827,7 +829,8 @@ ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	td->remainder -= sizeof(req);
 
 	/* avoid extra interrupt */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(x), USBHS_HSTPIPICR_TXSTP);
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(td->channel),
+	    USBHS_HSTPIPICR_TXSTP);
 
 	/* enable interrupts */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(td->channel),
@@ -1025,7 +1028,8 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	}
 
 	/* avoid extra interrupt */
-	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(x), USBHS_HSTPIPICR_TXOUT);
+	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPICR(td->channel),
+	    USBHS_HSTPIPICR_TXOUT);
 
 	/* enable interrupts */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(td->channel),
