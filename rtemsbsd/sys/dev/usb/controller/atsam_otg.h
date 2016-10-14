@@ -41,33 +41,37 @@
 #define	ATS_OTG_WRITE_4(sc, reg, data)	\
     bus_space_write_4((sc)->sc_io_tag, (sc)->sc_io_hdl, reg, data)
 
-#define	ATS_OTG_READ_FIFO_1(sc, ep, data, len)	do {			\
+#define	ATS_OTG_READ_FIFO_1(sc, off, data, len)	do {			\
     if ((uintptr_t)(data) & 3) {					\
 	bus_space_read_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    ATS_OTG_FIFO_OFFSET(ep), (data), (len));			\
+	    (off), (data), (len));					\
+	(off) += (len);							\
     } else {								\
+	uint32_t __rem = (len) & 3;					\
 	bus_space_read_region_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    ATS_OTG_FIFO_OFFSET(ep), (data), (len) / 4);		\
-	if (((len) & 3) == 0)						\
+	    (off), (data), (len) / 4);					\
+	(off) += (len);							\
+	if (__rem == 0)							\
 		break;							\
 	bus_space_read_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    ATS_OTG_FIFO_OFFSET(ep) + ((len) & ~3),			\
-	    ((uint8_t *)(data)) + ((len) & ~3), (len) & 3);		\
+	    (off) - __rem, ((uint8_t *)(data)) + (len) - __rem, __rem); \
    }									\
 } while (0)
 
-#define	ATS_OTG_WRITE_FIFO_1(sc, ep, data, len)	do {			\
+#define	ATS_OTG_WRITE_FIFO_1(sc, off, data, len) do {			\
     if ((uintptr_t)(data) & 3) {					\
 	bus_space_write_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    ATS_OTG_FIFO_OFFSET(ep), (data), (len));			\
+	    (off), (data), (len));					\
+	(off) += (len);							\
     } else {								\
+	uint32_t __rem = (len) & 3;					\
 	bus_space_write_region_4((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    ATS_OTG_FIFO_OFFSET(ep), (data), (len) / 4);		\
-	if (((len) & 3) == 0)						\
+	    (off), (data), (len) / 4);					\
+	(off) += (len);							\
+	if (__rem == 0)							\
 		break;							\
 	bus_space_write_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
-	    ATS_OTG_FIFO_OFFSET(ep) + ((len) & ~3),			\
-	    ((uint8_t *)(data)) + ((len) & ~3), (len) & 3);		\
+	    (off) - __rem, ((uint8_t *)(data)) + (len) - __rem, __rem); \
    }									\
 } while (0)
 
