@@ -2613,7 +2613,7 @@ tr_handle_set_port_feature:
 		break;
 	case UHF_PORT_POWER:
 		sc->sc_flags.port_powered = 1;
-		if (sc->sc_mode == ATS_MODE_DEVICE || sc->sc_mode == ATS_MODE_OTG) {
+		if (sc->sc_mode == ATS_MODE_DEVICE) {
 			/* pull up D+, if any */
 			ats_otg_pull_up(sc);
 		}
