@@ -669,7 +669,7 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 
 	/* compute key */
 	temp = td->dev_index | (td->ep_no << 8) | (td->ep_type << 16);
-	if (td->ep_type != UE_CONTROL &&
+	if (td->ep_type == UE_CONTROL ||
 	    ep_token == USBHS_HSTPIPCFG_PTOKEN_IN) {
 		temp |= 0x8000;
 	}
@@ -693,6 +693,9 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 						break;
 				}
 			}
+			/* allocate key */
+			sc->sc_chan_state[x].key = temp;
+
 			/* enable host pipe */
 			temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
 			temp |= USBHS_HSTPIP_PEN(x);
@@ -747,6 +750,8 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 	/* enable host pipe interrupts */
 	ATS_OTG_WRITE_4(sc, USBHS_HSTIER, USBHS_HSTIER_PEP(x));
 
+	td->channel = x;
+
 	return (0);			/* allocated */
 }
 
@@ -795,12 +800,9 @@ ats_otg_host_setup_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	uint32_t temp;
 
 	/* try to allocate a free channel */
-	if (td->channel == ATS_OTG_MAX_HOST_CHANNELS) {
-		td->channel = ats_otg_host_channel_alloc(sc, td,
-		    USBHS_HSTPIPCFG_PTOKEN_SETUP);
-		if (td->channel == ATS_OTG_MAX_HOST_CHANNELS)
-			return (1);	/* busy */
-	}
+	if (ats_otg_host_channel_alloc(sc, td, USBHS_HSTPIPCFG_PTOKEN_SETUP))
+		return (1);	/* busy */
+
 	/* get endpoint status */
 	temp = ATS_OTG_READ_4(sc, USBHS_HSTPIPISR(td->channel));
 
@@ -865,12 +867,9 @@ ats_otg_host_data_rx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	uint8_t got_short;
 
 	/* try to allocate a free channel */
-	if (td->channel == ATS_OTG_MAX_HOST_CHANNELS) {
-		td->channel = ats_otg_host_channel_alloc(sc, td,
-		    USBHS_HSTPIPCFG_PTOKEN_IN);
-		if (td->channel == ATS_OTG_MAX_HOST_CHANNELS)
-			return (1);	/* busy */
-	}
+	if (ats_otg_host_channel_alloc(sc, td, USBHS_HSTPIPCFG_PTOKEN_IN))
+		return (1);	/* busy */
+
 	got_short = 0;
 
 	/* get endpoint status */
@@ -977,12 +976,9 @@ ats_otg_host_data_tx(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	uint16_t count;
 
 	/* try to allocate a free channel */
-	if (td->channel == ATS_OTG_MAX_HOST_CHANNELS) {
-		td->channel = ats_otg_host_channel_alloc(sc, td,
-		    USBHS_HSTPIPCFG_PTOKEN_OUT);
-		if (td->channel == ATS_OTG_MAX_HOST_CHANNELS)
-			return (1);	/* busy */
-	}
+	if (ats_otg_host_channel_alloc(sc, td, USBHS_HSTPIPCFG_PTOKEN_OUT))
+		return (1);	/* busy */
+
 	/* get endpoint status */
 	temp = ATS_OTG_READ_4(sc, USBHS_HSTPIPISR(td->channel));
 
