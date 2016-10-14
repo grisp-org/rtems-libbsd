@@ -729,14 +729,19 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 
 	/* reset host pipe, if any */
 	if (ep_token == USBHS_HSTPIPCFG_PTOKEN_SETUP) {
+		/* reset host pipe */
 		temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
 		ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp |
 		    USBHS_HSTPIP_PRST(x));
 		ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp);
-	}
+	} else if (td->ep_type != UE_CONTROL && td->toggle == 0) {
+		/* reset host pipe */
+		temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
+		ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp |
+		    USBHS_HSTPIP_PRST(x));
+		ATS_OTG_WRITE_4(sc, USBHS_HSTPIP, temp);
 
-	/* reset data toggle, if any */
-	if (td->ep_type == UE_BULK && td->toggle == 0) {
+		/* reset data toggle */
 		ATS_OTG_WRITE_4(sc, USBHS_HSTPIPIER(x),
 		    USBHS_HSTPIPIER_RSTDT);
 	}
