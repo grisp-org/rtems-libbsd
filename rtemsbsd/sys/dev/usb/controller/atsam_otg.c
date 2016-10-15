@@ -646,15 +646,18 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 
 	/* compute key */
 	temp = td->dev_index | (td->ep_no << 8) | (td->ep_type << 16);
-	if (td->ep_type == UE_CONTROL ||
-	    ep_token == USBHS_HSTPIPCFG_PTOKEN_IN) {
+	if (td->ep_type == UE_CONTROL)
+		temp |= 0x80FF;
+	else if (td->ep_token == USBHS_HSTPIPCFG_PTOKEN_IN)
 		temp |= 0x8000;
-	}
 
 	for (x = 0; x != ATS_OTG_MAX_HOST_CHANNELS; x++) {
 		/* check if key matches */
-		if (sc->sc_chan_state[x].key == temp)
+		if (sc->sc_chan_state[x].key == temp) {
+			if (sc->sc_chan_state[x].busy != 0)
+				return (1);
 			break;
+		}
 		/* check if we should allocate a new host pipe */
 		if (sc->sc_chan_state[x].key == 0) {
 			uint8_t y;
@@ -675,6 +678,7 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 
 			/* allocate key */
 			sc->sc_chan_state[x].key = temp;
+			sc->sc_chan_state[x].busy = 1;
 
 			/* enable host pipe */
 			temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
@@ -749,6 +753,9 @@ ats_otg_host_channel_free(struct ats_otg_softc *sc, struct ats_otg_td *td)
 	/* free channel */
 	x = td->channel;
 	td->channel = ATS_OTG_MAX_HOST_CHANNELS;
+
+	/* clear busy flag */
+	sc->sc_chan_state[x].busy = 0;
 
 	DPRINTF("CH=%d\n", x);
 
