@@ -94,6 +94,12 @@ ats_otg_7x_power_on(struct ats_otg_softc *sc, uint8_t enable)
 		PIO_Clear(pin_vbus_en);
 	else
 		PIO_Set(pin_vbus_en);
+
+	/* Disable UTMI USB port reset */
+	UTMI->UTMI_OHCIICR = UTMI_OHCIICR_RES0;
+
+	/* set 12MHz reference clock */
+	UTMI->UTMI_CKTRIM = UTMI_CKTRIM_FREQ_XTAL12;
 }
 
 static int
