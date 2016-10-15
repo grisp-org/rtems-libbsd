@@ -1960,10 +1960,11 @@ ats_otg_init(struct ats_otg_softc *sc)
 	USB_BUS_LOCK(&sc->sc_bus);
 
 	/* disable USB block */
-	ATS_OTG_WRITE_4(sc, USBHS_CTRL, USBHS_CTRL_VBUSHWC);
+	ATS_OTG_WRITE_4(sc, USBHS_CTRL, 0);
 
-	/* wait for host to detect disconnect */
-	usb_pause_mtx(&sc->sc_bus.bus_mtx, hz / 32);
+	/* wait for clock to become usable */
+	while (!(ATS_OTG_READ_4(sc, USBHS_SR) & USBHS_SR_CLKUSABLE))
+		;
 
 	switch (sc->sc_mode) {
 	case ATS_MODE_HOST:
