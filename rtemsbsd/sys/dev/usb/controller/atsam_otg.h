@@ -42,7 +42,7 @@
     bus_space_write_4((sc)->sc_io_tag, (sc)->sc_io_hdl, reg, data)
 
 #define	ATS_OTG_READ_FIFO_1(sc, off, data, len)	do {			\
-    if ((uintptr_t)(data) & 3) {					\
+    if (((uintptr_t)(data) & 3) || ((off) & 3)) {			\
 	bus_space_read_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
 	    (off), (data), (len));					\
 	(off) += (len);							\
@@ -59,7 +59,7 @@
 } while (0)
 
 #define	ATS_OTG_WRITE_FIFO_1(sc, off, data, len) do {			\
-    if ((uintptr_t)(data) & 3) {					\
+    if (((uintptr_t)(data) & 3) || ((off) & 3)) {			\
 	bus_space_write_region_1((sc)->sc_fifo_tag, (sc)->sc_fifo_hdl,	\
 	    (off), (data), (len));					\
 	(off) += (len);							\
