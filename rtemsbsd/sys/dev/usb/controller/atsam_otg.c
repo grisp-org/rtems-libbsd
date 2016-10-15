@@ -659,9 +659,6 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 		if (sc->sc_chan_state[x].key == 0) {
 			uint8_t y;
 
-			if ((sc->sc_host_memory_used + td->max_packet_size) >
-			    ATS_OTG_MAX_HOST_MEMORY || td->max_packet_size > 1024)
-				return (1);	/* busy - out of memory */
 			if (td->ep_type == UE_CONTROL) {
 				y = 3;	/* 64-bytes */
 			} else {
@@ -670,6 +667,12 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 						break;
 				}
 			}
+
+			/* check if there is enough space for FIFO */
+			if ((sc->sc_host_memory_used + (1U << (y + 3))) >
+			    ATS_OTG_MAX_HOST_MEMORY || td->max_packet_size > 1024)
+				return (1);	/* busy - out of memory */
+
 			/* allocate key */
 			sc->sc_chan_state[x].key = temp;
 
