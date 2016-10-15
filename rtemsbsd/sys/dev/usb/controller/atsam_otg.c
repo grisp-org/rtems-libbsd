@@ -678,7 +678,6 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 
 			/* allocate key */
 			sc->sc_chan_state[x].key = temp;
-			sc->sc_chan_state[x].busy = 1;
 
 			/* enable host pipe */
 			temp = ATS_OTG_READ_4(sc, USBHS_HSTPIP);
@@ -702,6 +701,9 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 	}
 	if (x == ATS_OTG_MAX_HOST_CHANNELS)
 		return (1);		/* busy - out of channels */
+
+	/* set channel busy */
+	sc->sc_chan_state[x].busy = 1;
 
 	/* update token, if any */
 	temp = ATS_OTG_READ_4(sc, USBHS_HSTPIPCFG(x));
