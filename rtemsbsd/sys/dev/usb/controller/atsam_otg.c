@@ -2539,7 +2539,13 @@ tr_handle_clear_port_feature:
 
 	case UHF_PORT_POWER:
 		sc->sc_flags.port_powered = 0;
-		ats_otg_pull_down(sc);
+		if (sc->sc_mode == ATS_MODE_HOST) {
+			if (sc->sc_pwr_cmd != NULL)
+				sc->sc_pwr_cmd(sc, 0);
+		} else {
+			/* pull down D+, if any */
+			ats_otg_pull_down(sc);
+		}
 		break;
 
 	case UHF_C_PORT_CONNECTION:
@@ -2619,7 +2625,10 @@ tr_handle_set_port_feature:
 		break;
 	case UHF_PORT_POWER:
 		sc->sc_flags.port_powered = 1;
-		if (sc->sc_mode == ATS_MODE_DEVICE) {
+		if (sc->sc_mode == ATS_MODE_HOST) {
+			if (sc->sc_pwr_cmd != NULL)
+				sc->sc_pwr_cmd(sc, 1);
+		} else {
 			/* pull up D+, if any */
 			ats_otg_pull_up(sc);
 		}
