@@ -650,7 +650,15 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 	    ep_token == USBHS_HSTPIPCFG_PTOKEN_IN) {
 		temp |= 0x8000;
 	}
-
+#if 0
+	/*
+	 * This hack allows more control endpoints to exist,
+	 * but then the application must not use control
+	 * endpoints outside the USB enumeration thread!
+	 */
+	if (td->ep_type == UE_CONTROL)
+		temp |= 0x00FF;		/* ignore device address */
+#endif
 	for (x = 0; x != ATS_OTG_MAX_HOST_CHANNELS; x++) {
 		/* check if key matches */
 		if (sc->sc_chan_state[x].key == temp)
