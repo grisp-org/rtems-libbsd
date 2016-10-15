@@ -152,6 +152,7 @@ struct ats_otg_flags {
 };
 
 struct ats_otg_chan_state {
+	uint32_t busy;
 	uint32_t key;
 };
 
