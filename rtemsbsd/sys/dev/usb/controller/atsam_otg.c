@@ -648,7 +648,7 @@ ats_otg_host_channel_alloc(struct ats_otg_softc *sc, struct ats_otg_td *td,
 	temp = td->dev_index | (td->ep_no << 8) | (td->ep_type << 16);
 	if (td->ep_type == UE_CONTROL)
 		temp |= 0x80FF;
-	else if (td->ep_token == USBHS_HSTPIPCFG_PTOKEN_IN)
+	else if (ep_token == USBHS_HSTPIPCFG_PTOKEN_IN)
 		temp |= 0x8000;
 
 	for (x = 0; x != ATS_OTG_MAX_HOST_CHANNELS; x++) {
