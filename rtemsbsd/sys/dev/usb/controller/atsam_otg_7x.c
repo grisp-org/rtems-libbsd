@@ -82,21 +82,18 @@ static device_detach_t ats_otg_7x_detach;
 static const Pin pin_vbus_en[] = { PINS_VBUS_EN };
 
 static void
-ats_otg_7x_on(struct ats_otg_softc *sc)
+ats_otg_7x_power_on(struct ats_otg_softc *sc, uint8_t enable)
 {
-
 	sysclk_enable_usb();
 	PMC_EnablePeripheral(ID_USBHS);
 
 	PIO_Configure(pin_vbus_en, PIO_LISTSIZE(pin_vbus_en));
 
-	/* Power off USB devices */
-	PIO_Set(pin_vbus_en);
-
-	DELAY(50000);
-
-	/* Power on USB devices */
-	PIO_Clear(pin_vbus_en);
+	/* Power ON/OFF USB devices */
+	if (enable)
+		PIO_Clear(pin_vbus_en);
+	else
+		PIO_Set(pin_vbus_en);
 }
 
 static int
@@ -116,6 +113,9 @@ ats_otg_7x_attach(device_t dev)
 
 	/* select USB HOST mode */
 	sc->sc_mode = ATS_MODE_HOST;
+
+	/* set power mode callback */
+	sc->sc_pwr_cmd = &ats_otg_7x_power_on;
 
 	/* initialise some bus fields */
 	sc->sc_bus.parent = dev;
@@ -162,7 +162,8 @@ ats_otg_7x_attach(device_t dev)
 	}
 	device_set_ivars(sc->sc_bus.bdev, &sc->sc_bus);
 
-	ats_otg_7x_on(sc);
+	/* set power off by default */
+	ats_otg_7x_power_on(sc, 0);
 
 	err = bus_setup_intr(dev, sc->sc_irq_res, INTR_TYPE_TTY | INTR_MPSAFE,
 	    ats_otg_filter_interrupt, ats_otg_interrupt, sc, &sc->sc_intr_hdl);

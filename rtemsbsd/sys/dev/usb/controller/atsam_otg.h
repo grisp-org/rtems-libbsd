@@ -79,6 +79,7 @@ struct ats_otg_td;
 struct ats_otg_softc;
 
 typedef uint8_t (ats_otg_cmd_t)(struct ats_otg_softc *sc, struct ats_otg_td *td);
+typedef void (ats_pwr_cmd_t)(struct ats_otg_softc *sc, uint8_t);
 
 struct ats_otg_td {
 	struct ats_otg_td *obj_next;
@@ -160,6 +161,8 @@ struct ats_otg_softc {
 	union ats_otg_hub_temp sc_hub_temp;
 
 	struct usb_device *sc_devices[ATS_OTG_MAX_DEVICES];
+
+	ats_pwr_cmd_t *sc_pwr_cmd;
 
 	struct resource *sc_io_res;
 	struct resource *sc_fifo_res;
