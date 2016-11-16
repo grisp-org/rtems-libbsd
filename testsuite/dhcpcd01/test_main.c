@@ -33,6 +33,12 @@
 
 #include <rtems.h>
 
+#include <grisp/pin-config.h>
+
+const Pin atsam_pin_config[] = {GRISP_PIN_CONFIG};
+const size_t atsam_pin_config_count = PIO_LISTSIZE(atsam_pin_config);
+const uint32_t atsam_matrix_ccfg_sysio = GRISP_MATRIX_CCFG_SYSIO;
+
 #define TEST_NAME "LIBBSD DHCPCD 1"
 
 static void

@@ -259,7 +259,7 @@ Init(rtems_task_argument arg)
 	sc = rtems_shell_init(
 		"SHLL",
 		32 * 1024,
-		1,
+		110,
 		CONSOLE_DEVICE_NAME,
 		false,
 		false,
