@@ -2762,7 +2762,9 @@ usbd_enum_lock(struct usb_device *udev)
 	 * are locked before locking Giant. Else the lock can be
 	 * locked multiple times.
 	 */
+#ifndef __rtems__
 	mtx_lock(&Giant);
+#endif /* __rtems__ */
 	return (1);
 }
 
@@ -2782,7 +2784,9 @@ usbd_enum_lock_sig(struct usb_device *udev)
 		sx_xunlock(&udev->enum_sx);
 		return (255);
 	}
+#ifndef __rtems__
 	mtx_lock(&Giant);
+#endif /* __rtems__ */
 	return (1);
 }
 #endif
@@ -2792,7 +2796,9 @@ usbd_enum_lock_sig(struct usb_device *udev)
 void
 usbd_enum_unlock(struct usb_device *udev)
 {
+#ifndef __rtems__
 	mtx_unlock(&Giant);
+#endif /* __rtems__ */
 	sx_xunlock(&udev->enum_sx);
 	sx_xunlock(&udev->sr_sx);
 }
@@ -2808,7 +2814,9 @@ usbd_sr_lock(struct usb_device *udev)
 	 * are locked before locking Giant. Else the lock can be
 	 * locked multiple times.
 	 */
+#ifndef __rtems__
 	mtx_lock(&Giant);
+#endif /* __rtems__ */
 }
 
 /* The following function unlocks suspend and resume. */
@@ -2816,7 +2824,9 @@ usbd_sr_lock(struct usb_device *udev)
 void
 usbd_sr_unlock(struct usb_device *udev)
 {
+#ifndef __rtems__
 	mtx_unlock(&Giant);
+#endif /* __rtems__ */
 	sx_xunlock(&udev->sr_sx);
 }
 
