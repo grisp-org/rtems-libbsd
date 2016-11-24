@@ -1016,7 +1016,7 @@ def dev_wlan_rtwn(mm):
             'sys/dev/rtwn/usb/rtwn_usb_rx.c',
             'sys/dev/rtwn/usb/rtwn_usb_tx.c',
         ],
-        mm.generator['source']()
+        mm.generator['source'](['-DRTWN_DEBUG'])
     )
     return mod
 
