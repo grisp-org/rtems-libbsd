@@ -2938,7 +2938,7 @@ def tests(mm):
     #mod.addTest(mm.generator['test']('zerocopy01', ['test_main'],
     #                                 runTest = False, netTest = True))
     #mod.addTest(mm.generator['test']('smp01', ['test_main']))
-    #mod.addTest(mm.generator['test']('media01', ['test_main'], runTest = False))
+    mod.addTest(mm.generator['test']('media01', ['test_main'], runTest = False))
     #mod.addTest(mm.generator['test']('vlan01', ['test_main'], netTest = True))
     #mod.addTest(mm.generator['test']('lagg01', ['test_main'], netTest = True))
     #mod.addTest(mm.generator['test']('log01', ['test_main']))

@@ -1424,6 +1424,16 @@ def build(bld):
                           relative_trick = True)
 
     # Tests
+    test_media01 = ['testsuite/media01/test_main.c']
+    bld.program(target = "media01.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_media01,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
     test_usb01 = ['testsuite/usb01/init.c']
     bld.program(target = "usb01.exe",
                 features = "cprogram",
