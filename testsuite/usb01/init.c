@@ -38,6 +38,7 @@
 #include <rtems/media.h>
 #include <rtems/shell.h>
 #include <rtems/bsd/bsd.h>
+#include <rtems/dosfs.h>
 
 #define TEST_NAME "LIBBSD USB 1"
 
@@ -82,6 +83,13 @@ media_listener(rtems_media_event event, rtems_media_state state,
 	}
 
 	return RTEMS_SUCCESSFUL;
+}
+
+rtems_dosfs_convert_control *rtems_dosfs_create_utf8_converter(
+  const char *codepage
+)
+{
+	return NULL;
 }
 
 static void
