@@ -223,34 +223,6 @@ usbd_copy_in_user(struct usb_page_cache *cache, usb_frlength_t offset,
 #endif
 
 /*------------------------------------------------------------------------*
- *  usbd_m_copy_in - copy a mbuf chain directly into DMA-able memory
- *------------------------------------------------------------------------*/
-#if USB_HAVE_MBUF
-struct usb_m_copy_in_arg {
-	struct usb_page_cache *cache;
-	usb_frlength_t dst_offset;
-};
-
-static int
-usbd_m_copy_in_cb(void *arg, void *src, uint32_t count)
-{
-	register struct usb_m_copy_in_arg *ua = arg;
-
-	usbd_copy_in(ua->cache, ua->dst_offset, src, count);
-	ua->dst_offset += count;
-	return (0);
-}
-
-void
-usbd_m_copy_in(struct usb_page_cache *cache, usb_frlength_t dst_offset,
-    struct mbuf *m, usb_size_t src_offset, usb_frlength_t src_len)
-{
-	struct usb_m_copy_in_arg arg = {cache, dst_offset};
-	(void) m_apply(m, src_offset, src_len, &usbd_m_copy_in_cb, &arg);
-}
-#endif
-
-/*------------------------------------------------------------------------*
  *  usb_uiomove - factored out code
  *------------------------------------------------------------------------*/
 #if USB_HAVE_USER_IO

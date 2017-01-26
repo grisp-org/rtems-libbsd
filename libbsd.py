@@ -467,6 +467,7 @@ def dev_usb(mm):
             'sys/dev/usb/usb_hub.c',
             'sys/dev/usb/usb_lookup.c',
             'sys/dev/usb/usb_mbuf.c',
+            'sys/dev/usb/usb_mbufdma.c',
             'sys/dev/usb/usb_msctest.c',
             'sys/dev/usb/usb_parse.c',
             'sys/dev/usb/usb_process.c',

@@ -913,6 +913,7 @@ def build(bld):
               'freebsd/sys/dev/usb/usb_hub.c',
               'freebsd/sys/dev/usb/usb_lookup.c',
               'freebsd/sys/dev/usb/usb_mbuf.c',
+              'freebsd/sys/dev/usb/usb_mbufdma.c',
               'freebsd/sys/dev/usb/usb_msctest.c',
               'freebsd/sys/dev/usb/usb_parse.c',
               'freebsd/sys/dev/usb/usb_process.c',
