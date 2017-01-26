@@ -40,12 +40,6 @@
 #include <rtems/shell.h>
 #include <rtems/telnetd.h>
 
-#include <grisp/pin-config.h>
-
-const Pin atsam_pin_config[] = {GRISP_PIN_CONFIG};
-const size_t atsam_pin_config_count = PIO_LISTSIZE(atsam_pin_config);
-const uint32_t atsam_matrix_ccfg_sysio = GRISP_MATRIX_CCFG_SYSIO;
-
 #define TEST_NAME "LIBBSD MEDIA 1"
 
 struct rtems_ftpd_configuration rtems_ftpd_configuration = {
@@ -212,8 +206,7 @@ early_initialization(void)
   &rtems_shell_NETSTAT_Command, \
   &rtems_shell_SYSCTL_Command, \
   &rtems_shell_IFCONFIG_Command, \
-  &rtems_shell_VMSTAT_Command, \
-  &rtems_shell_WLANSTATS_Command
+  &rtems_shell_VMSTAT_Command
 
 #define CONFIGURE_SHELL_COMMAND_CPUUSE
 #define CONFIGURE_SHELL_COMMAND_PERIODUSE

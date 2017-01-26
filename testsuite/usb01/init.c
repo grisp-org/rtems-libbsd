@@ -39,15 +39,9 @@
 #include <rtems/shell.h>
 #include <rtems/bsd/bsd.h>
 
-#include <grisp/pin-config.h>
-
-const Pin atsam_pin_config[] = {GRISP_PIN_CONFIG};
-const size_t atsam_pin_config_count = PIO_LISTSIZE(atsam_pin_config);
-const uint32_t atsam_matrix_ccfg_sysio = GRISP_MATRIX_CCFG_SYSIO;
-
 #define TEST_NAME "LIBBSD USB 1"
 
-uintptr_t rtems_bsd_allocator_domain_page_mbuf_size = 16 * 1024 * 1024;
+uintptr_t rtems_bsd_allocator_domain_page_mbuf_size = 512 * 1024;
 
 static rtems_status_code
 media_listener(rtems_media_event event, rtems_media_state state,
@@ -169,13 +163,7 @@ Init(rtems_task_argument arg)
 
 #define CONFIGURE_SHELL_USER_COMMANDS \
   &bsp_interrupt_shell_command, \
-  &rtems_shell_SYSCTL_Command, \
-  &rtems_shell_HOSTNAME_Command, \
-  &rtems_shell_PING_Command, \
-  &rtems_shell_ROUTE_Command, \
-  &rtems_shell_NETSTAT_Command, \
-  &rtems_shell_IFCONFIG_Command, \
-  &rtems_shell_VMSTAT_Command
+  &rtems_shell_SYSCTL_Command
 
 #define CONFIGURE_SHELL_COMMAND_CPUUSE
 #define CONFIGURE_SHELL_COMMAND_PERIODUSE
