@@ -901,6 +901,12 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 #ifndef __rtems__
 	WR4(sc, MCI_IER, MCI_SR_ERROR | MCI_SR_CMDRDY);
 #else /* __rtems__ */
+	/* FIXME: The following disables write. This currently does not work. */
+	if ((data->flags & MMC_DATA_WRITE) != 0) {
+		WR4(sc, MCI_IER, MCI_SR_ERROR | MCI_SR_CMDRDY);
+		return;
+	}
+
 	if (! (data->flags & (MMC_DATA_READ | MMC_DATA_WRITE))) {
 		WR4(sc, MCI_IER, MCI_SR_ERROR | MCI_SR_CMDRDY);
 	} else {
