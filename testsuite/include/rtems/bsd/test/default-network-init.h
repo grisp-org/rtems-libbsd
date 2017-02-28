@@ -306,6 +306,8 @@ Init(rtems_task_argument arg)
 #endif
 
 #define RTEMS_BSD_CONFIG_NET_PF_UNIX
+#define RTEMS_BSD_CONFIG_NET_IP_MROUTE
+#define RTEMS_BSD_CONFIG_NET_IP6_MROUTE
 #define RTEMS_BSD_CONFIG_NET_IF_LAGG
 #define RTEMS_BSD_CONFIG_NET_IF_VLAN
 #define RTEMS_BSD_CONFIG_BSP_CONFIG
@@ -355,14 +357,16 @@ Init(rtems_task_argument arg)
 
 #define CONFIGURE_SHELL_USER_COMMANDS \
   &bsp_interrupt_shell_command, \
-  &rtems_shell_BSD_Command, \
+  &rtems_shell_ARP_Command, \
   &rtems_shell_HOSTNAME_Command, \
   &rtems_shell_PING_Command, \
   &rtems_shell_ROUTE_Command, \
   &rtems_shell_NETSTAT_Command, \
   &rtems_shell_IFCONFIG_Command, \
   &rtems_shell_TCPDUMP_Command, \
-  &rtems_shell_SYSCTL_Command
+  &rtems_shell_SYSCTL_Command, \
+  &rtems_shell_VMSTAT_Command, \
+  &rtems_shell_WLANSTATS_Command
 
 #define CONFIGURE_SHELL_COMMAND_CPUUSE
 #define CONFIGURE_SHELL_COMMAND_PERIODUSE

@@ -26,10 +26,10 @@ def options(opt):
     pass
 
 def bsp_configure(conf, arch_bsp):
-    pass
+    conf.check(header_name = "rtems/rtems-debugger.h", features = "c", includes = conf.env.IFLAGS, mandatory = False)
 
 def configure(conf):
-    pass
+    rtems.configure(conf, bsp_configure)
 
 def build(bld):
     # C/C++ flags
@@ -45,8 +45,8 @@ def build(bld):
         common_flags += ["-Wno-pointer-sign"]
     else:
         common_flags += ["-w"]
-    cflags = ['-std=gnu11'] + common_flags
-    cxxflags = ['-std=gnu++11'] + common_flags
+    cflags = [] + common_flags
+    cxxflags = [] + common_flags
 
     # Defines
     defines = []
@@ -63,9 +63,11 @@ def build(bld):
             includes += ["%s" % (i[2:].replace("@CPU@", "x86"))]
     includes += ["rtemsbsd/include"]
     includes += ["freebsd/sys"]
-    includes += ["freebsd/sys/contrib/altq"]
     includes += ["freebsd/sys/contrib/pf"]
+    includes += ["freebsd/sys/net"]
     includes += ["freebsd/include"]
+    includes += ["freebsd/lib"]
+    includes += ["freebsd/lib/libbsdstat"]
     includes += ["freebsd/lib/libc/include"]
     includes += ["freebsd/lib/libc/isc/include"]
     includes += ["freebsd/lib/libc/resolv"]
@@ -73,7 +75,9 @@ def build(bld):
     includes += ["freebsd/lib/libkvm"]
     includes += ["freebsd/lib/libmemstat"]
     includes += ["freebsd/lib/libipsec"]
+    includes += ["freebsd/contrib/expat/lib"]
     includes += ["freebsd/contrib/libpcap"]
+    includes += ["freebsd/contrib/libxo"]
     includes += ["rtemsbsd/sys"]
     includes += ["mDNSResponder/mDNSCore"]
     includes += ["mDNSResponder/mDNSShared"]
@@ -195,17 +199,6 @@ def build(bld):
                 source = "freebsd/contrib/libpcap/grammar.c")
     libbsd_use += ["yacc_pcap"]
     if bld.env.AUTO_REGEN:
-        bld(target = "freebsd/contrib/pf/pfctl/parse.c",
-            source = "freebsd/contrib/pf/pfctl/parse.y",
-            rule = host_shell + "${YACC} -b pfctly -d -p pfctly ${SRC} && sed -e '/YY_BUF_SIZE/s/16384/1024/' < pfctly.tab.c > ${TGT} && rm -f pfctly.tab.c && mv pfctly.tab.h freebsd/contrib/pf/pfctl/parse.h")
-    bld.objects(target = "yacc_pfctly",
-                features = "c",
-                cflags = cflags,
-                includes = [] + includes,
-                defines = defines + [],
-                source = "freebsd/contrib/pf/pfctl/parse.c")
-    libbsd_use += ["yacc_pfctly"]
-    if bld.env.AUTO_REGEN:
         bld(target = "freebsd/lib/libc/net/nsparser.c",
             source = "freebsd/lib/libc/net/nsparser.y",
             rule = host_shell + "${YACC} -b _nsyy -d -p _nsyy ${SRC} && sed -e '/YY_BUF_SIZE/s/16384/1024/' < _nsyy.tab.c > ${TGT} && rm -f _nsyy.tab.c && mv _nsyy.tab.h freebsd/lib/libc/net/nsparser.h")
@@ -227,18 +220,38 @@ def build(bld):
                 defines = defines + [],
                 source = "freebsd/lib/libipsec/policy_parse.c")
     libbsd_use += ["yacc___libipsecyy"]
+    if bld.env.AUTO_REGEN:
+        bld(target = "freebsd/sbin/pfctl/parse.c",
+            source = "freebsd/sbin/pfctl/parse.y",
+            rule = host_shell + "${YACC} -b pfctly -d -p pfctly ${SRC} && sed -e '/YY_BUF_SIZE/s/16384/1024/' < pfctly.tab.c > ${TGT} && rm -f pfctly.tab.c && mv pfctly.tab.h freebsd/sbin/pfctl/parse.h")
+    bld.objects(target = "yacc_pfctly",
+                features = "c",
+                cflags = cflags,
+                includes = [] + includes,
+                defines = defines + [],
+                source = "freebsd/sbin/pfctl/parse.c")
+    libbsd_use += ["yacc_pfctly"]
 
     # Objects built with different CFLAGS
-    objs01_source = ['freebsd/bin/hostname/hostname.c',
-                     'freebsd/contrib/pf/pfctl/pf_print_state.c',
-                     'freebsd/contrib/pf/pfctl/pfctl.c',
-                     'freebsd/contrib/pf/pfctl/pfctl_altq.c',
-                     'freebsd/contrib/pf/pfctl/pfctl_optimize.c',
-                     'freebsd/contrib/pf/pfctl/pfctl_osfp.c',
-                     'freebsd/contrib/pf/pfctl/pfctl_parser.c',
-                     'freebsd/contrib/pf/pfctl/pfctl_qstats.c',
-                     'freebsd/contrib/pf/pfctl/pfctl_radix.c',
-                     'freebsd/contrib/pf/pfctl/pfctl_table.c',
+    objs01_source = ['freebsd/contrib/expat/lib/xmlparse.c',
+                     'freebsd/contrib/expat/lib/xmlrole.c',
+                     'freebsd/contrib/expat/lib/xmltok.c',
+                     'freebsd/contrib/expat/lib/xmltok_impl.c',
+                     'freebsd/contrib/expat/lib/xmltok_ns.c']
+    bld.objects(target = "objs01",
+                features = "c",
+                cflags = cflags,
+                includes = [] + includes,
+                defines = defines + ['HAVE_MEMMOVE=1'],
+                source = objs01_source)
+    libbsd_use += ["objs01"]
+
+    objs02_source = ['freebsd/bin/hostname/hostname.c',
+                     'freebsd/contrib/libxo/libxo/libxo.c',
+                     'freebsd/contrib/libxo/libxo/xo_encoder.c',
+                     'freebsd/lib/lib80211/lib80211_ioctl.c',
+                     'freebsd/lib/lib80211/lib80211_regdomain.c',
+                     'freebsd/lib/libbsdstat/bsdstat.c',
                      'freebsd/lib/libc/gen/err.c',
                      'freebsd/lib/libc/gen/feature_present.c',
                      'freebsd/lib/libc/gen/getdomainname.c',
@@ -414,22 +427,35 @@ def build(bld):
                      'freebsd/sbin/ifconfig/af_link.c',
                      'freebsd/sbin/ifconfig/af_nd6.c',
                      'freebsd/sbin/ifconfig/ifbridge.c',
-                     'freebsd/sbin/ifconfig/ifcarp.c',
                      'freebsd/sbin/ifconfig/ifclone.c',
                      'freebsd/sbin/ifconfig/ifconfig.c',
                      'freebsd/sbin/ifconfig/ifgif.c',
                      'freebsd/sbin/ifconfig/ifgre.c',
                      'freebsd/sbin/ifconfig/ifgroup.c',
+                     'freebsd/sbin/ifconfig/ifieee80211.c',
                      'freebsd/sbin/ifconfig/iflagg.c',
                      'freebsd/sbin/ifconfig/ifmac.c',
                      'freebsd/sbin/ifconfig/ifmedia.c',
                      'freebsd/sbin/ifconfig/ifpfsync.c',
                      'freebsd/sbin/ifconfig/ifvlan.c',
+                     'freebsd/sbin/ifconfig/sfp.c',
+                     'freebsd/sbin/pfctl/pf_print_state.c',
+                     'freebsd/sbin/pfctl/pfctl.c',
+                     'freebsd/sbin/pfctl/pfctl_altq.c',
+                     'freebsd/sbin/pfctl/pfctl_optimize.c',
+                     'freebsd/sbin/pfctl/pfctl_osfp.c',
+                     'freebsd/sbin/pfctl/pfctl_parser.c',
+                     'freebsd/sbin/pfctl/pfctl_qstats.c',
+                     'freebsd/sbin/pfctl/pfctl_radix.c',
+                     'freebsd/sbin/pfctl/pfctl_table.c',
                      'freebsd/sbin/ping/ping.c',
                      'freebsd/sbin/ping6/ping6.c',
                      'freebsd/sbin/route/route.c',
                      'freebsd/sbin/sysctl/sysctl.c',
+                     'freebsd/tools/tools/net80211/wlanstats/main.c',
+                     'freebsd/tools/tools/net80211/wlanstats/wlanstats.c',
                      'freebsd/usr.bin/netstat/bpf.c',
+                     'freebsd/usr.bin/netstat/flowtable.c',
                      'freebsd/usr.bin/netstat/if.c',
                      'freebsd/usr.bin/netstat/inet.c',
                      'freebsd/usr.bin/netstat/inet6.c',
@@ -438,28 +464,31 @@ def build(bld):
                      'freebsd/usr.bin/netstat/mbuf.c',
                      'freebsd/usr.bin/netstat/mroute.c',
                      'freebsd/usr.bin/netstat/mroute6.c',
+                     'freebsd/usr.bin/netstat/nl_symbols.c',
                      'freebsd/usr.bin/netstat/pfkey.c',
                      'freebsd/usr.bin/netstat/route.c',
                      'freebsd/usr.bin/netstat/sctp.c',
-                     'freebsd/usr.bin/netstat/unix.c']
-    bld.objects(target = "objs01",
-                features = "c",
-                cflags = cflags,
-                includes = [] + includes,
-                defines = defines + ['INET6'],
-                source = objs01_source)
-    libbsd_use += ["objs01"]
-
-    objs02_source = ['rtemsbsd/mghttpd/mongoose.c']
+                     'freebsd/usr.bin/netstat/unix.c',
+                     'freebsd/usr.bin/vmstat/vmstat.c',
+                     'freebsd/usr.sbin/arp/arp.c']
     bld.objects(target = "objs02",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
-                defines = defines + ['NO_SSL', 'NO_POPEN', 'NO_CGI', 'USE_WEBSOCKET'],
+                defines = defines + ['INET', 'INET6'],
                 source = objs02_source)
     libbsd_use += ["objs02"]
 
-    objs03_source = ['freebsd/lib/libc/db/btree/bt_close.c',
+    objs03_source = ['rtemsbsd/mghttpd/mongoose.c']
+    bld.objects(target = "objs03",
+                features = "c",
+                cflags = cflags,
+                includes = [] + includes,
+                defines = defines + ['NO_CGI', 'NO_POPEN', 'NO_SSL', 'USE_WEBSOCKET'],
+                source = objs03_source)
+    libbsd_use += ["objs03"]
+
+    objs04_source = ['freebsd/lib/libc/db/btree/bt_close.c',
                      'freebsd/lib/libc/db/btree/bt_conv.c',
                      'freebsd/lib/libc/db/btree/bt_debug.c',
                      'freebsd/lib/libc/db/btree/bt_delete.c',
@@ -483,15 +512,15 @@ def build(bld):
                      'freebsd/lib/libc/db/recno/rec_search.c',
                      'freebsd/lib/libc/db/recno/rec_seq.c',
                      'freebsd/lib/libc/db/recno/rec_utils.c']
-    bld.objects(target = "objs03",
+    bld.objects(target = "objs04",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
-                defines = defines + ['__DBINTERFACE_PRIVATE', 'INET6'],
-                source = objs03_source)
-    libbsd_use += ["objs03"]
+                defines = defines + ['INET6', '__DBINTERFACE_PRIVATE'],
+                source = objs04_source)
+    libbsd_use += ["objs04"]
 
-    objs04_source = ['dhcpcd/arp.c',
+    objs05_source = ['dhcpcd/arp.c',
                      'dhcpcd/auth.c',
                      'dhcpcd/bpf.c',
                      'dhcpcd/common.c',
@@ -513,15 +542,15 @@ def build(bld):
                      'dhcpcd/ipv6nd.c',
                      'dhcpcd/net.c',
                      'dhcpcd/platform-bsd.c']
-    bld.objects(target = "objs04",
+    bld.objects(target = "objs05",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
-                defines = defines + ['__FreeBSD__', 'THERE_IS_NO_FORK', 'MASTER_ONLY', 'INET', 'INET6'],
-                source = objs04_source)
-    libbsd_use += ["objs04"]
+                defines = defines + ['INET', 'INET6', 'MASTER_ONLY', 'THERE_IS_NO_FORK', '__FreeBSD__'],
+                source = objs05_source)
+    libbsd_use += ["objs05"]
 
-    objs05_source = ['freebsd/contrib/libpcap/bpf_image.c',
+    objs06_source = ['freebsd/contrib/libpcap/bpf_image.c',
                      'freebsd/contrib/libpcap/etherent.c',
                      'freebsd/contrib/libpcap/fad-getad.c',
                      'freebsd/contrib/libpcap/gencode.c',
@@ -534,15 +563,15 @@ def build(bld):
                      'freebsd/contrib/libpcap/savefile.c',
                      'freebsd/contrib/libpcap/sf-pcap-ng.c',
                      'freebsd/contrib/libpcap/sf-pcap.c']
-    bld.objects(target = "objs05",
+    bld.objects(target = "objs06",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
-                defines = defines + ['__FreeBSD__=1', 'BSD=1', 'INET6', '_U_=__attribute__((unused))', 'HAVE_LIMITS_H=1', 'HAVE_INTTYPES=1', 'HAVE_STDINT=1', 'HAVE_STRERROR=1', 'HAVE_STRLCPY=1', 'HAVE_SNPRINTF=1', 'HAVE_VSNPRINTF=1', 'HAVE_SOCKADDR_SA_LEN=1', 'HAVE_NET_IF_MEDIA_H=1', 'HAVE_SYS_IOCCOM_H=1'],
-                source = objs05_source)
-    libbsd_use += ["objs05"]
+                defines = defines + ['BSD=1', 'HAVE_INTTYPES=1', 'HAVE_LIMITS_H=1', 'HAVE_NET_IF_MEDIA_H=1', 'HAVE_SNPRINTF=1', 'HAVE_SOCKADDR_SA_LEN=1', 'HAVE_STDINT=1', 'HAVE_STRERROR=1', 'HAVE_STRLCPY=1', 'HAVE_SYS_IOCCOM_H=1', 'HAVE_VSNPRINTF=1', 'INET6', '_U_=__attribute__((unused))', '__FreeBSD__=1'],
+                source = objs06_source)
+    libbsd_use += ["objs06"]
 
-    objs06_source = ['freebsd/contrib/tcpdump/addrtoname.c',
+    objs07_source = ['freebsd/contrib/tcpdump/addrtoname.c',
                      'freebsd/contrib/tcpdump/af.c',
                      'freebsd/contrib/tcpdump/bpf_dump.c',
                      'freebsd/contrib/tcpdump/checksum.c',
@@ -685,37 +714,20 @@ def build(bld):
                      'freebsd/contrib/tcpdump/smbutil.c',
                      'freebsd/contrib/tcpdump/tcpdump.c',
                      'freebsd/contrib/tcpdump/util.c']
-    bld.objects(target = "objs06",
+    bld.objects(target = "objs07",
                 features = "c",
                 cflags = cflags,
                 includes = ['freebsd/contrib/tcpdump', 'freebsd/usr.sbin/tcpdump/tcpdump'] + includes,
-                defines = defines + ['__FreeBSD__=1', 'INET6', '_U_=__attribute__((unused))', 'HAVE_CONFIG_H=1', 'HAVE_NET_PFVAR_H=1'],
-                source = objs06_source)
-    libbsd_use += ["objs06"]
+                defines = defines + ['HAVE_CONFIG_H=1', 'HAVE_NET_PFVAR_H=1', 'INET6', '_U_=__attribute__((unused))', '__FreeBSD__=1'],
+                source = objs07_source)
+    libbsd_use += ["objs07"]
 
     source = ['freebsd/sys/arm/at91/at91_mci.c',
+              'freebsd/sys/arm/lpc/if_lpe.c',
+              'freebsd/sys/arm/lpc/lpc_pwr.c',
               'freebsd/sys/arm/xilinx/zy7_slcr.c',
               'freebsd/sys/cam/cam.c',
               'freebsd/sys/cam/scsi/scsi_all.c',
-              'freebsd/sys/contrib/altq/altq/altq_cbq.c',
-              'freebsd/sys/contrib/altq/altq/altq_cdnr.c',
-              'freebsd/sys/contrib/altq/altq/altq_hfsc.c',
-              'freebsd/sys/contrib/altq/altq/altq_priq.c',
-              'freebsd/sys/contrib/altq/altq/altq_red.c',
-              'freebsd/sys/contrib/altq/altq/altq_rio.c',
-              'freebsd/sys/contrib/altq/altq/altq_rmclass.c',
-              'freebsd/sys/contrib/altq/altq/altq_subr.c',
-              'freebsd/sys/contrib/pf/net/if_pflog.c',
-              'freebsd/sys/contrib/pf/net/if_pfsync.c',
-              'freebsd/sys/contrib/pf/net/pf.c',
-              'freebsd/sys/contrib/pf/net/pf_if.c',
-              'freebsd/sys/contrib/pf/net/pf_ioctl.c',
-              'freebsd/sys/contrib/pf/net/pf_lb.c',
-              'freebsd/sys/contrib/pf/net/pf_norm.c',
-              'freebsd/sys/contrib/pf/net/pf_osfp.c',
-              'freebsd/sys/contrib/pf/net/pf_ruleset.c',
-              'freebsd/sys/contrib/pf/net/pf_table.c',
-              'freebsd/sys/contrib/pf/netinet/in4_cksum.c',
               'freebsd/sys/crypto/blowfish/bf_ecb.c',
               'freebsd/sys/crypto/blowfish/bf_enc.c',
               'freebsd/sys/crypto/blowfish/bf_skey.c',
@@ -729,7 +741,11 @@ def build(bld):
               'freebsd/sys/crypto/rijndael/rijndael-api-fst.c',
               'freebsd/sys/crypto/rijndael/rijndael-api.c',
               'freebsd/sys/crypto/sha1.c',
-              'freebsd/sys/crypto/sha2/sha2.c',
+              'freebsd/sys/crypto/sha2/sha256c.c',
+              'freebsd/sys/crypto/sha2/sha512c.c',
+              'freebsd/sys/crypto/siphash/siphash.c',
+              'freebsd/sys/crypto/skein/skein.c',
+              'freebsd/sys/crypto/skein/skein_block.c',
               'freebsd/sys/dev/bce/if_bce.c',
               'freebsd/sys/dev/bfe/if_bfe.c',
               'freebsd/sys/dev/bge/if_bge.c',
@@ -775,14 +791,106 @@ def build(bld):
               'freebsd/sys/dev/pci/pci.c',
               'freebsd/sys/dev/pci/pci_pci.c',
               'freebsd/sys/dev/pci/pci_user.c',
-              'freebsd/sys/dev/random/harvest.c',
               'freebsd/sys/dev/re/if_re.c',
+              'freebsd/sys/dev/rtwn/if_rtwn.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_beacon.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_calib.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_cam.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_efuse.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_fw.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_rx.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_task.c',
+              'freebsd/sys/dev/rtwn/if_rtwn_tx.c',
+              'freebsd/sys/dev/rtwn/pci/rtwn_pci_attach.c',
+              'freebsd/sys/dev/rtwn/pci/rtwn_pci_reg.c',
+              'freebsd/sys/dev/rtwn/pci/rtwn_pci_rx.c',
+              'freebsd/sys/dev/rtwn/pci/rtwn_pci_tx.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_beacon.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_calib.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_chan.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_fw.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_init.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_led.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_rf.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_rom.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/r88e_tx.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/usb/r88eu_attach.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/usb/r88eu_init.c',
+              'freebsd/sys/dev/rtwn/rtl8188e/usb/r88eu_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/pci/r92ce_attach.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/pci/r92ce_calib.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/pci/r92ce_fw.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/pci/r92ce_init.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/pci/r92ce_led.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/pci/r92ce_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/pci/r92ce_tx.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_attach.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_beacon.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_calib.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_chan.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_fw.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_init.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_rf.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_rom.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/r92c_tx.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/usb/r92cu_attach.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/usb/r92cu_init.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/usb/r92cu_led.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/usb/r92cu_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8192c/usb/r92cu_tx.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_beacon.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_calib.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_caps.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_chan.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_fw.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_init.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_led.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_rf.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_rom.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/r12a_tx.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/usb/r12au_attach.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/usb/r12au_init.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/usb/r12au_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8812a/usb/r12au_tx.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_beacon.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_calib.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_chan.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_fw.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_init.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_led.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_rom.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/r21a_rx.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/usb/r21au_attach.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/usb/r21au_dfs.c',
+              'freebsd/sys/dev/rtwn/rtl8821a/usb/r21au_init.c',
+              'freebsd/sys/dev/rtwn/usb/rtwn_usb_attach.c',
+              'freebsd/sys/dev/rtwn/usb/rtwn_usb_ep.c',
+              'freebsd/sys/dev/rtwn/usb/rtwn_usb_reg.c',
+              'freebsd/sys/dev/rtwn/usb/rtwn_usb_rx.c',
+              'freebsd/sys/dev/rtwn/usb/rtwn_usb_tx.c',
               'freebsd/sys/dev/smc/if_smc.c',
               'freebsd/sys/dev/tsec/if_tsec.c',
               'freebsd/sys/dev/usb/controller/dwc_otg.c',
               'freebsd/sys/dev/usb/controller/ehci.c',
               'freebsd/sys/dev/usb/controller/ohci.c',
               'freebsd/sys/dev/usb/controller/usb_controller.c',
+              'freebsd/sys/dev/usb/net/if_aue.c',
+              'freebsd/sys/dev/usb/net/if_axe.c',
+              'freebsd/sys/dev/usb/net/if_axge.c',
+              'freebsd/sys/dev/usb/net/if_cdce.c',
+              'freebsd/sys/dev/usb/net/if_cue.c',
+              'freebsd/sys/dev/usb/net/if_ipheth.c',
+              'freebsd/sys/dev/usb/net/if_kue.c',
+              'freebsd/sys/dev/usb/net/if_mos.c',
+              'freebsd/sys/dev/usb/net/if_rue.c',
+              'freebsd/sys/dev/usb/net/if_smsc.c',
+              'freebsd/sys/dev/usb/net/if_udav.c',
+              'freebsd/sys/dev/usb/net/if_ure.c',
+              'freebsd/sys/dev/usb/net/ruephy.c',
+              'freebsd/sys/dev/usb/net/usb_ethernet.c',
               'freebsd/sys/dev/usb/quirk/usb_quirk.c',
               'freebsd/sys/dev/usb/storage/umass.c',
               'freebsd/sys/dev/usb/usb_busdma.c',
@@ -804,6 +912,14 @@ def build(bld):
               'freebsd/sys/dev/usb/usb_request.c',
               'freebsd/sys/dev/usb/usb_transfer.c',
               'freebsd/sys/dev/usb/usb_util.c',
+              'freebsd/sys/dev/usb/wlan/if_rsu.c',
+              'freebsd/sys/dev/usb/wlan/if_rum.c',
+              'freebsd/sys/dev/usb/wlan/if_run.c',
+              'freebsd/sys/dev/usb/wlan/if_uath.c',
+              'freebsd/sys/dev/usb/wlan/if_upgt.c',
+              'freebsd/sys/dev/usb/wlan/if_ural.c',
+              'freebsd/sys/dev/usb/wlan/if_urtw.c',
+              'freebsd/sys/dev/usb/wlan/if_zyd.c',
               'freebsd/sys/kern/init_main.c',
               'freebsd/sys/kern/kern_condvar.c',
               'freebsd/sys/kern/kern_conf.c',
@@ -821,14 +937,18 @@ def build(bld):
               'freebsd/sys/kern/kern_sysctl.c',
               'freebsd/sys/kern/kern_time.c',
               'freebsd/sys/kern/kern_timeout.c',
+              'freebsd/sys/kern/kern_uuid.c',
               'freebsd/sys/kern/subr_bufring.c',
               'freebsd/sys/kern/subr_bus.c',
+              'freebsd/sys/kern/subr_counter.c',
               'freebsd/sys/kern/subr_eventhandler.c',
+              'freebsd/sys/kern/subr_firmware.c',
               'freebsd/sys/kern/subr_hash.c',
               'freebsd/sys/kern/subr_hints.c',
               'freebsd/sys/kern/subr_kobj.c',
               'freebsd/sys/kern/subr_lock.c',
               'freebsd/sys/kern/subr_module.c',
+              'freebsd/sys/kern/subr_pcpu.c',
               'freebsd/sys/kern/subr_prf.c',
               'freebsd/sys/kern/subr_rman.c',
               'freebsd/sys/kern/subr_sbuf.c',
@@ -837,20 +957,32 @@ def build(bld):
               'freebsd/sys/kern/subr_uio.c',
               'freebsd/sys/kern/subr_unit.c',
               'freebsd/sys/kern/sys_generic.c',
+              'freebsd/sys/kern/sys_pipe.c',
               'freebsd/sys/kern/sys_socket.c',
               'freebsd/sys/kern/uipc_accf.c',
               'freebsd/sys/kern/uipc_domain.c',
               'freebsd/sys/kern/uipc_mbuf.c',
               'freebsd/sys/kern/uipc_mbuf2.c',
+              'freebsd/sys/kern/uipc_mbufhash.c',
               'freebsd/sys/kern/uipc_sockbuf.c',
               'freebsd/sys/kern/uipc_socket.c',
               'freebsd/sys/kern/uipc_syscalls.c',
               'freebsd/sys/kern/uipc_usrreq.c',
-              'freebsd/sys/libkern/arc4random.c',
               'freebsd/sys/libkern/bcd.c',
-              'freebsd/sys/libkern/fls.c',
               'freebsd/sys/libkern/inet_ntoa.c',
+              'freebsd/sys/libkern/jenkins_hash.c',
+              'freebsd/sys/libkern/murmur3_32.c',
               'freebsd/sys/libkern/random.c',
+              'freebsd/sys/net/altq/altq_cbq.c',
+              'freebsd/sys/net/altq/altq_cdnr.c',
+              'freebsd/sys/net/altq/altq_codel.c',
+              'freebsd/sys/net/altq/altq_fairq.c',
+              'freebsd/sys/net/altq/altq_hfsc.c',
+              'freebsd/sys/net/altq/altq_priq.c',
+              'freebsd/sys/net/altq/altq_red.c',
+              'freebsd/sys/net/altq/altq_rio.c',
+              'freebsd/sys/net/altq/altq_rmclass.c',
+              'freebsd/sys/net/altq/altq_subr.c',
               'freebsd/sys/net/bpf.c',
               'freebsd/sys/net/bpf_buffer.c',
               'freebsd/sys/net/bpf_filter.c',
@@ -865,11 +997,9 @@ def build(bld):
               'freebsd/sys/net/if_dead.c',
               'freebsd/sys/net/if_disc.c',
               'freebsd/sys/net/if_edsc.c',
-              'freebsd/sys/net/if_ef.c',
               'freebsd/sys/net/if_enc.c',
               'freebsd/sys/net/if_epair.c',
               'freebsd/sys/net/if_ethersubr.c',
-              'freebsd/sys/net/if_faith.c',
               'freebsd/sys/net/if_fddisubr.c',
               'freebsd/sys/net/if_fwsubr.c',
               'freebsd/sys/net/if_gif.c',
@@ -895,6 +1025,45 @@ def build(bld):
               'freebsd/sys/net/route.c',
               'freebsd/sys/net/rtsock.c',
               'freebsd/sys/net/slcompress.c',
+              'freebsd/sys/net80211/ieee80211.c',
+              'freebsd/sys/net80211/ieee80211_acl.c',
+              'freebsd/sys/net80211/ieee80211_action.c',
+              'freebsd/sys/net80211/ieee80211_adhoc.c',
+              'freebsd/sys/net80211/ieee80211_ageq.c',
+              'freebsd/sys/net80211/ieee80211_amrr.c',
+              'freebsd/sys/net80211/ieee80211_crypto.c',
+              'freebsd/sys/net80211/ieee80211_crypto_ccmp.c',
+              'freebsd/sys/net80211/ieee80211_crypto_none.c',
+              'freebsd/sys/net80211/ieee80211_crypto_tkip.c',
+              'freebsd/sys/net80211/ieee80211_crypto_wep.c',
+              'freebsd/sys/net80211/ieee80211_ddb.c',
+              'freebsd/sys/net80211/ieee80211_dfs.c',
+              'freebsd/sys/net80211/ieee80211_freebsd.c',
+              'freebsd/sys/net80211/ieee80211_hostap.c',
+              'freebsd/sys/net80211/ieee80211_ht.c',
+              'freebsd/sys/net80211/ieee80211_hwmp.c',
+              'freebsd/sys/net80211/ieee80211_input.c',
+              'freebsd/sys/net80211/ieee80211_ioctl.c',
+              'freebsd/sys/net80211/ieee80211_mesh.c',
+              'freebsd/sys/net80211/ieee80211_monitor.c',
+              'freebsd/sys/net80211/ieee80211_node.c',
+              'freebsd/sys/net80211/ieee80211_output.c',
+              'freebsd/sys/net80211/ieee80211_phy.c',
+              'freebsd/sys/net80211/ieee80211_power.c',
+              'freebsd/sys/net80211/ieee80211_proto.c',
+              'freebsd/sys/net80211/ieee80211_radiotap.c',
+              'freebsd/sys/net80211/ieee80211_ratectl.c',
+              'freebsd/sys/net80211/ieee80211_ratectl_none.c',
+              'freebsd/sys/net80211/ieee80211_regdomain.c',
+              'freebsd/sys/net80211/ieee80211_rssadapt.c',
+              'freebsd/sys/net80211/ieee80211_scan.c',
+              'freebsd/sys/net80211/ieee80211_scan_sta.c',
+              'freebsd/sys/net80211/ieee80211_scan_sw.c',
+              'freebsd/sys/net80211/ieee80211_sta.c',
+              'freebsd/sys/net80211/ieee80211_superg.c',
+              'freebsd/sys/net80211/ieee80211_tdma.c',
+              'freebsd/sys/net80211/ieee80211_wds.c',
+              'freebsd/sys/net80211/ieee80211_xauth.c',
               'freebsd/sys/netinet/accf_data.c',
               'freebsd/sys/netinet/accf_dns.c',
               'freebsd/sys/netinet/accf_http.c',
@@ -904,6 +1073,7 @@ def build(bld):
               'freebsd/sys/netinet/if_ether.c',
               'freebsd/sys/netinet/igmp.c',
               'freebsd/sys/netinet/in.c',
+              'freebsd/sys/netinet/in_fib.c',
               'freebsd/sys/netinet/in_gif.c',
               'freebsd/sys/netinet/in_mcast.c',
               'freebsd/sys/netinet/in_pcb.c',
@@ -921,6 +1091,7 @@ def build(bld):
               'freebsd/sys/netinet/ip_mroute.c',
               'freebsd/sys/netinet/ip_options.c',
               'freebsd/sys/netinet/ip_output.c',
+              'freebsd/sys/netinet/ip_reass.c',
               'freebsd/sys/netinet/libalias/alias.c',
               'freebsd/sys/netinet/libalias/alias_cuseeme.c',
               'freebsd/sys/netinet/libalias/alias_db.c',
@@ -969,6 +1140,7 @@ def build(bld):
               'freebsd/sys/netinet6/icmp6.c',
               'freebsd/sys/netinet6/in6.c',
               'freebsd/sys/netinet6/in6_cksum.c',
+              'freebsd/sys/netinet6/in6_fib.c',
               'freebsd/sys/netinet6/in6_gif.c',
               'freebsd/sys/netinet6/in6_ifattach.c',
               'freebsd/sys/netinet6/in6_mcast.c',
@@ -976,6 +1148,7 @@ def build(bld):
               'freebsd/sys/netinet6/in6_proto.c',
               'freebsd/sys/netinet6/in6_rmx.c',
               'freebsd/sys/netinet6/in6_src.c',
+              'freebsd/sys/netinet6/ip6_fastfwd.c',
               'freebsd/sys/netinet6/ip6_forward.c',
               'freebsd/sys/netinet6/ip6_id.c',
               'freebsd/sys/netinet6/ip6_input.c',
@@ -990,26 +1163,44 @@ def build(bld):
               'freebsd/sys/netinet6/scope6.c',
               'freebsd/sys/netinet6/sctp6_usrreq.c',
               'freebsd/sys/netinet6/udp6_usrreq.c',
-              'freebsd/sys/netpfil/ipfw/dn_heap.c',
-              'freebsd/sys/netpfil/ipfw/dn_sched_fifo.c',
-              'freebsd/sys/netpfil/ipfw/dn_sched_prio.c',
-              'freebsd/sys/netpfil/ipfw/dn_sched_qfq.c',
-              'freebsd/sys/netpfil/ipfw/dn_sched_rr.c',
-              'freebsd/sys/netpfil/ipfw/dn_sched_wf2q.c',
-              'freebsd/sys/netpfil/ipfw/ip_dn_glue.c',
-              'freebsd/sys/netpfil/ipfw/ip_dn_io.c',
-              'freebsd/sys/netpfil/ipfw/ip_dummynet.c',
               'freebsd/sys/netpfil/ipfw/ip_fw2.c',
+              'freebsd/sys/netpfil/ipfw/ip_fw_bpf.c',
+              'freebsd/sys/netpfil/ipfw/ip_fw_dynamic.c',
+              'freebsd/sys/netpfil/ipfw/ip_fw_eaction.c',
+              'freebsd/sys/netpfil/ipfw/ip_fw_iface.c',
               'freebsd/sys/netpfil/ipfw/ip_fw_log.c',
               'freebsd/sys/netpfil/ipfw/ip_fw_nat.c',
               'freebsd/sys/netpfil/ipfw/ip_fw_pfil.c',
               'freebsd/sys/netpfil/ipfw/ip_fw_sockopt.c',
               'freebsd/sys/netpfil/ipfw/ip_fw_table.c',
+              'freebsd/sys/netpfil/ipfw/ip_fw_table_algo.c',
+              'freebsd/sys/netpfil/ipfw/ip_fw_table_value.c',
+              'freebsd/sys/netpfil/ipfw/nat64/ip_fw_nat64.c',
+              'freebsd/sys/netpfil/ipfw/nat64/nat64_translate.c',
+              'freebsd/sys/netpfil/ipfw/nat64/nat64lsn.c',
+              'freebsd/sys/netpfil/ipfw/nat64/nat64lsn_control.c',
+              'freebsd/sys/netpfil/ipfw/nat64/nat64stl.c',
+              'freebsd/sys/netpfil/ipfw/nat64/nat64stl_control.c',
+              'freebsd/sys/netpfil/ipfw/nptv6/ip_fw_nptv6.c',
+              'freebsd/sys/netpfil/ipfw/nptv6/nptv6.c',
+              'freebsd/sys/netpfil/pf/if_pflog.c',
+              'freebsd/sys/netpfil/pf/if_pfsync.c',
+              'freebsd/sys/netpfil/pf/in4_cksum.c',
+              'freebsd/sys/netpfil/pf/pf.c',
+              'freebsd/sys/netpfil/pf/pf_if.c',
+              'freebsd/sys/netpfil/pf/pf_ioctl.c',
+              'freebsd/sys/netpfil/pf/pf_lb.c',
+              'freebsd/sys/netpfil/pf/pf_norm.c',
+              'freebsd/sys/netpfil/pf/pf_osfp.c',
+              'freebsd/sys/netpfil/pf/pf_ruleset.c',
+              'freebsd/sys/netpfil/pf/pf_table.c',
               'freebsd/sys/opencrypto/cast.c',
               'freebsd/sys/opencrypto/criov.c',
               'freebsd/sys/opencrypto/crypto.c',
+              'freebsd/sys/opencrypto/cryptodeflate.c',
               'freebsd/sys/opencrypto/cryptosoft.c',
-              'freebsd/sys/opencrypto/deflate.c',
+              'freebsd/sys/opencrypto/gfmult.c',
+              'freebsd/sys/opencrypto/gmac.c',
               'freebsd/sys/opencrypto/rmd160.c',
               'freebsd/sys/opencrypto/skipjack.c',
               'freebsd/sys/opencrypto/xform.c',
@@ -1034,11 +1225,15 @@ def build(bld):
               'rtemsbsd/local/bus_if.c',
               'rtemsbsd/local/cryptodev_if.c',
               'rtemsbsd/local/device_if.c',
+              'rtemsbsd/local/gpio_if.c',
+              'rtemsbsd/local/if_dwc_if.c',
               'rtemsbsd/local/miibus_if.c',
               'rtemsbsd/local/mmcbr_if.c',
               'rtemsbsd/local/mmcbus_if.c',
               'rtemsbsd/local/pci_if.c',
               'rtemsbsd/local/pcib_if.c',
+              'rtemsbsd/local/rtwn-rtl8192cfwT.c',
+              'rtemsbsd/local/runfw.c',
               'rtemsbsd/local/usb_if.c',
               'rtemsbsd/mdns/mdns-hostname-default.c',
               'rtemsbsd/mdns/mdns.c',
@@ -1073,6 +1268,8 @@ def build(bld):
               'rtemsbsd/rtems/rtems-bsd-rc-conf-net.c',
               'rtemsbsd/rtems/rtems-bsd-rc-conf-pf.c',
               'rtemsbsd/rtems/rtems-bsd-rc-conf.c',
+              'rtemsbsd/rtems/rtems-bsd-regdomain.c',
+              'rtemsbsd/rtems/rtems-bsd-shell-arp.c',
               'rtemsbsd/rtems/rtems-bsd-shell-dhcpcd.c',
               'rtemsbsd/rtems/rtems-bsd-shell-ifconfig.c',
               'rtemsbsd/rtems/rtems-bsd-shell-netstat.c',
@@ -1081,7 +1278,8 @@ def build(bld):
               'rtemsbsd/rtems/rtems-bsd-shell-route.c',
               'rtemsbsd/rtems/rtems-bsd-shell-sysctl.c',
               'rtemsbsd/rtems/rtems-bsd-shell-tcpdump.c',
-              'rtemsbsd/rtems/rtems-bsd-shell.c',
+              'rtemsbsd/rtems/rtems-bsd-shell-vmstat.c',
+              'rtemsbsd/rtems/rtems-bsd-shell-wlanstats.c',
               'rtemsbsd/rtems/rtems-bsd-syscall-api.c',
               'rtemsbsd/rtems/rtems-kernel-assert.c',
               'rtemsbsd/rtems/rtems-kernel-autoconf.c',
@@ -1112,6 +1310,7 @@ def build(bld):
               'rtemsbsd/rtems/rtems-kernel-sysctl.c',
               'rtemsbsd/rtems/rtems-kernel-sysctlbyname.c',
               'rtemsbsd/rtems/rtems-kernel-sysctlnametomib.c',
+              'rtemsbsd/rtems/rtems-kernel-termioskqueuepoll.c',
               'rtemsbsd/rtems/rtems-kernel-thread.c',
               'rtemsbsd/rtems/rtems-kernel-timesupport.c',
               'rtemsbsd/rtems/rtems-kernel-vprintf.c',
@@ -1130,6 +1329,7 @@ def build(bld):
               'rtemsbsd/sys/dev/usb/controller/dwc_otg_nexus.c',
               'rtemsbsd/sys/dev/usb/controller/ehci_mpc83xx.c',
               'rtemsbsd/sys/dev/usb/controller/ohci_lpc.c',
+              'rtemsbsd/sys/dev/usb/controller/ohci_lpc32xx.c',
               'rtemsbsd/sys/dev/usb/controller/usb_otg_transceiver.c',
               'rtemsbsd/sys/dev/usb/controller/usb_otg_transceiver_dump.c',
               'rtemsbsd/sys/fs/devfs/devfs_devs.c',
@@ -1141,6 +1341,8 @@ def build(bld):
               'rtemsbsd/telnetd/telnetd-init.c',
               'rtemsbsd/telnetd/telnetd-service.c',
               'rtemsbsd/telnetd/telnetd.c']
+    if bld.env["HAVE_RTEMS_RTEMS_DEBUGGER_H"]:
+        source += ['rtemsbsd/debugger/rtems-debugger-remote-tcp.c']
     if bld.get_env()["RTEMS_ARCH"] == "arm":
         source += ['freebsd/sys/mips/mips/in_cksum.c']
     if bld.get_env()["RTEMS_ARCH"] == "avr":
@@ -1191,7 +1393,6 @@ def build(bld):
     header_paths = [('rtemsbsd/include', '*.h', ''),
                      ('rtemsbsd/mghttpd', 'mongoose.h', 'mghttpd'),
                      ('freebsd/include', '*.h', ''),
-                     ('freebsd/sys/contrib/altq/altq', '*.h', 'altq'),
                      ('freebsd/sys/bsm', '*.h', 'bsm'),
                      ('freebsd/sys/cam', '*.h', 'cam'),
                      ('freebsd/sys/net', '*.h', 'net'),
@@ -1256,6 +1457,17 @@ def build(bld):
                 use = ["bsd"],
                 lib = ["m", "z"],
                 install_path = None)
+
+    if bld.env["HAVE_RTEMS_RTEMS_DEBUGGER_H"]:
+        test_debugger01 = ['testsuite/debugger01/test_main.c']
+        bld.program(target = "debugger01.exe",
+                    features = "cprogram",
+                    cflags = cflags,
+                    includes = includes,
+                    source = test_debugger01,
+                    use = ["bsd"],
+                    lib = ["m", "z"],
+                    install_path = None)
 
     test_dhcpcd01 = ['testsuite/dhcpcd01/test_main.c']
     bld.program(target = "dhcpcd01.exe",

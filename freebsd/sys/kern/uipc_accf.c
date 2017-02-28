@@ -62,9 +62,8 @@ MALLOC_DEFINE(M_ACCF, "accf", "accept filter data");
 
 static int unloadable = 0;
 
-SYSCTL_DECL(_net_inet);	/* XXX: some header should do this for me */
-SYSCTL_NODE(_net_inet, OID_AUTO, accf, CTLFLAG_RW, 0, "Accept filters");
-SYSCTL_INT(_net_inet_accf, OID_AUTO, unloadable, CTLFLAG_RW, &unloadable, 0,
+SYSCTL_NODE(_net, OID_AUTO, accf, CTLFLAG_RW, 0, "Accept filters");
+SYSCTL_INT(_net_accf, OID_AUTO, unloadable, CTLFLAG_RW, &unloadable, 0,
 	"Allow unload of accept filters (not recommended)");
 
 /*
@@ -253,7 +252,7 @@ do_setopt_accept_filter(struct socket *so, struct sockopt *sopt)
 	newaf = malloc(sizeof(*newaf), M_ACCF, M_WAITOK |
 	    M_ZERO);
 	if (afp->accf_create != NULL && afap->af_name[0] != '\0') {
-		int len = strlen(afap->af_name) + 1;
+		size_t len = strlen(afap->af_name) + 1;
 		newaf->so_accept_filter_str = malloc(len, M_ACCF,
 		    M_WAITOK);
 		strcpy(newaf->so_accept_filter_str, afap->af_name);

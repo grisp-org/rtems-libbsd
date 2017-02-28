@@ -73,12 +73,15 @@ struct linker_file {
     int			userrefs;	/* kldload(2) count */
     int			flags;
 #define LINKER_FILE_LINKED	0x1	/* file has been fully linked */
+#define LINKER_FILE_MODULES	0x2	/* file has >0 modules at preload */
     TAILQ_ENTRY(linker_file) link;	/* list of all loaded files */
     char*		filename;	/* file which was loaded */
     char*		pathname;	/* file name with full path */
     int			id;		/* unique id */
     caddr_t		address;	/* load address */
     size_t		size;		/* size of file */
+    caddr_t		ctors_addr;	/* address of .ctors */
+    size_t		ctors_size;	/* size of .ctors */
     int			ndeps;		/* number of dependencies */
     linker_file_t*	deps;		/* list of dependencies */
     STAILQ_HEAD(, common_symbol) common; /* list of common symbols */
@@ -158,7 +161,7 @@ int linker_file_function_listall(linker_file_t,
 				 linker_function_nameval_callback_t, void *);
 
 /*
- * Functions soley for use by the linker class handlers.
+ * Functions solely for use by the linker class handlers.
  */
 int linker_add_class(linker_class_t _cls);
 int linker_file_unload(linker_file_t _file, int flags);
@@ -211,6 +214,9 @@ void *linker_hwpmc_list_objects(void);
 #define MODINFOMD_KERNEND	0x0008		/* kernend */
 #endif
 #define MODINFOMD_SHDR		0x0009		/* section header table */
+#define MODINFOMD_CTORS_ADDR	0x000a		/* address of .ctors */
+#define MODINFOMD_CTORS_SIZE	0x000b		/* size of .ctors */
+#define MODINFOMD_FW_HANDLE	0x000c		/* Firmware dependent handle */
 #define MODINFOMD_NOCOPY	0x8000		/* don't copy this metadata to the kernel */
 
 #define MODINFOMD_DEPLIST	(0x4001 | MODINFOMD_NOCOPY)	/* depends on */
@@ -224,6 +230,7 @@ void *linker_hwpmc_list_objects(void);
 #endif
 
 #define	LINKER_HINTS_VERSION	1		/* linker.hints file version */
+#define	LINKER_HINTS_MAX	(1 << 20)	/* Allow at most 1MB for linker.hints */
 
 #ifdef _KERNEL
 
@@ -260,7 +267,7 @@ extern int kld_debug;
 #endif
 
 #ifndef __rtems__
-typedef Elf_Addr elf_lookup_fn(linker_file_t, Elf_Size, int);
+typedef int elf_lookup_fn(linker_file_t, Elf_Size, int, Elf_Addr *);
 
 /* Support functions */
 int	elf_reloc(linker_file_t _lf, Elf_Addr base, const void *_rel, int _type, elf_lookup_fn _lu);

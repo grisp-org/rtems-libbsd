@@ -29,16 +29,6 @@
 #ifndef _MACHINE_CPUFUNC_H_
 #define	_MACHINE_CPUFUNC_H_
 
-/*
- * Required for user-space atomic.h includes
- */
-static __inline void
-powerpc_mb(void)
-{
-
-	__asm __volatile("eieio; sync" : : : "memory");
-}
-
 #ifdef _KERNEL
 
 #include <sys/types.h>
@@ -92,7 +82,7 @@ static __inline void
 mtsrin(vm_offset_t va, register_t value)
 {
 
-	__asm __volatile ("mtsrin %0,%1" :: "r"(value), "r"(va));
+	__asm __volatile ("mtsrin %0,%1; isync" :: "r"(value), "r"(va));
 }
 
 static __inline register_t

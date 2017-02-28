@@ -41,6 +41,9 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/sys/param.h>
 
+#if !defined(_KERNEL)
+#include <strings.h>
+#endif
 #if !defined(_KERNEL) || defined(sun)
 #include <netinet/in.h>
 #endif
@@ -98,7 +101,7 @@ m_xword(struct mbuf *m, bpf_u_int32 k, int *err)
 	while (k >= len) {
 		k -= len;
 		m = m->m_next;
-		if (m == 0)
+		if (m == NULL)
 			goto bad;
 		len = m->m_len;
 	}
@@ -108,7 +111,7 @@ m_xword(struct mbuf *m, bpf_u_int32 k, int *err)
 		return (EXTRACT_LONG(cp));
 	}
 	m0 = m->m_next;
-	if (m0 == 0 || m0->m_len + len - k < 4)
+	if (m0 == NULL || m0->m_len + len - k < 4)
 		goto bad;
 	*err = 0;
 	np = mtod(m0, u_char *);
@@ -147,7 +150,7 @@ m_xhalf(struct mbuf *m, bpf_u_int32 k, int *err)
 	while (k >= len) {
 		k -= len;
 		m = m->m_next;
-		if (m == 0)
+		if (m == NULL)
 			goto bad;
 		len = m->m_len;
 	}
@@ -157,7 +160,7 @@ m_xhalf(struct mbuf *m, bpf_u_int32 k, int *err)
 		return (EXTRACT_SHORT(cp));
 	}
 	m0 = m->m_next;
-	if (m0 == 0)
+	if (m0 == NULL)
 		goto bad;
 	*err = 0;
 	return ((cp[0] << 8) | mtod(m0, u_char *)[0]);
@@ -433,12 +436,22 @@ bpf_filter(const struct bpf_insn *pc, u_char *p, u_int wirelen, u_int buflen)
 			A /= X;
 			continue;
 
+		case BPF_ALU|BPF_MOD|BPF_X:
+			if (X == 0)
+				return (0);
+			A %= X;
+			continue;
+
 		case BPF_ALU|BPF_AND|BPF_X:
 			A &= X;
 			continue;
 
 		case BPF_ALU|BPF_OR|BPF_X:
 			A |= X;
+			continue;
+
+		case BPF_ALU|BPF_XOR|BPF_X:
+			A ^= X;
 			continue;
 
 		case BPF_ALU|BPF_LSH|BPF_X:
@@ -465,12 +478,20 @@ bpf_filter(const struct bpf_insn *pc, u_char *p, u_int wirelen, u_int buflen)
 			A /= pc->k;
 			continue;
 
+		case BPF_ALU|BPF_MOD|BPF_K:
+			A %= pc->k;
+			continue;
+
 		case BPF_ALU|BPF_AND|BPF_K:
 			A &= pc->k;
 			continue;
 
 		case BPF_ALU|BPF_OR|BPF_K:
 			A |= pc->k;
+			continue;
+
+		case BPF_ALU|BPF_XOR|BPF_K:
+			A ^= pc->k;
 			continue;
 
 		case BPF_ALU|BPF_LSH|BPF_K:
@@ -507,8 +528,8 @@ static const u_short	bpf_code_map[] = {
 	0x1013,	/* 0x60-0x6f: 1100100000001000 */
 	0x1010,	/* 0x70-0x7f: 0000100000001000 */
 	0x0093,	/* 0x80-0x8f: 1100100100000000 */
-	0x0000,	/* 0x90-0x9f: 0000000000000000 */
-	0x0000,	/* 0xa0-0xaf: 0000000000000000 */
+	0x1010,	/* 0x90-0x9f: 0000100000001000 */
+	0x1010,	/* 0xa0-0xaf: 0000100000001000 */
 	0x0002,	/* 0xb0-0xbf: 0100000000000000 */
 	0x0000,	/* 0xc0-0xcf: 0000000000000000 */
 	0x0000,	/* 0xd0-0xdf: 0000000000000000 */
@@ -576,7 +597,8 @@ bpf_validate(const struct bpf_insn *f, int len)
 		/*
 		 * Check for constant division by 0.
 		 */
-		if (p->code == (BPF_ALU|BPF_DIV|BPF_K) && p->k == 0)
+		if ((p->code == (BPF_ALU|BPF_DIV|BPF_K) ||
+		    p->code == (BPF_ALU|BPF_MOD|BPF_K)) && p->k == 0)
 			return (0);
 	}
 	return (BPF_CLASS(f[len - 1].code) == BPF_RET);

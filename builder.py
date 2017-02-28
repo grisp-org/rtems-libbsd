@@ -173,9 +173,11 @@ def commonNoWarnings():
 def includes():
     return ['-Irtemsbsd/include',
             '-Ifreebsd/sys',
-            '-Ifreebsd/sys/contrib/altq',
             '-Ifreebsd/sys/contrib/pf',
+            '-Ifreebsd/sys/net',
             '-Ifreebsd/include',
+            '-Ifreebsd/lib',
+            '-Ifreebsd/lib/libbsdstat',
             '-Ifreebsd/lib/libc/include',
             '-Ifreebsd/lib/libc/isc/include',
             '-Ifreebsd/lib/libc/resolv',
@@ -183,7 +185,9 @@ def includes():
             '-Ifreebsd/lib/libkvm',
             '-Ifreebsd/lib/libmemstat',
             '-Ifreebsd/lib/libipsec',
+            '-Ifreebsd/contrib/expat/lib',
             '-Ifreebsd/contrib/libpcap',
+            '-Ifreebsd/contrib/libxo',
             '-Irtemsbsd/sys',
             '-ImDNSResponder/mDNSCore',
             '-ImDNSResponder/mDNSShared',
@@ -195,17 +199,16 @@ def cpuIncludes():
             '-Ifreebsd/sys/@CPU@/include']
 
 def cflags():
-    return ['-std=gnu11']
+    return []
 
 def cxxflags():
-    return ['-std=gnu++11']
+    return []
 
 def headerPaths():
     #         local path                      wildcard             dest path
     return [('rtemsbsd/include',              '*.h',               ''),
             ('rtemsbsd/mghttpd',              'mongoose.h',        'mghttpd'),
             ('freebsd/include',               '*.h',               ''),
-            ('freebsd/sys/contrib/altq/altq', '*.h',               'altq'),
             ('freebsd/sys/bsm',               '*.h',               'bsm'),
             ('freebsd/sys/cam',               '*.h',               'cam'),
             ('freebsd/sys/net',               '*.h',               'net'),

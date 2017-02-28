@@ -1,5 +1,9 @@
 #include <machine/rtems-bsd-user-space.h>
 
+#ifdef __rtems__
+#include "rtems-bsd-ifconfig-namespace.h"
+#endif /* __rtems__ */
+
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,6 +38,9 @@ static const char rcsid[] =
   "$FreeBSD$";
 #endif /* not lint */
 
+#ifdef __rtems__
+#include <machine/rtems-bsd-program.h>
+#endif /* __rtems__ */
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -50,23 +57,35 @@ static const char rcsid[] =
 #include <net/ethernet.h>
 
 #include "ifconfig.h"
+#ifdef __rtems__
+#include "rtems-bsd-ifconfig-af_link-data.h"
+#endif /* __rtems__ */
 
 static struct ifreq link_ridreq;
+
+extern char *f_ether;
 
 static void
 link_status(int s __unused, const struct ifaddrs *ifa)
 {
 	/* XXX no const 'cuz LLADDR is defined wrong */
 	struct sockaddr_dl *sdl = (struct sockaddr_dl *) ifa->ifa_addr;
+	char *ether_format, *format_char;
 
 	if (sdl != NULL && sdl->sdl_alen > 0) {
 		if ((sdl->sdl_type == IFT_ETHER ||
 		    sdl->sdl_type == IFT_L2VLAN ||
 		    sdl->sdl_type == IFT_BRIDGE) &&
-		    sdl->sdl_alen == ETHER_ADDR_LEN)
-			printf("\tether %s\n",
-			    ether_ntoa((struct ether_addr *)LLADDR(sdl)));
-		else {
+		    sdl->sdl_alen == ETHER_ADDR_LEN) {
+			ether_format = ether_ntoa((struct ether_addr *)LLADDR(sdl));
+			if (f_ether != NULL && strcmp(f_ether, "dash") == 0) {
+				for (format_char = strchr(ether_format, ':'); 
+				    format_char != NULL; 
+				    format_char = strchr(ether_format, ':'))
+					*format_char = '-';
+			}
+			printf("\tether %s\n", ether_format);
+		} else {
 			int n = sdl->sdl_nlen > 0 ? sdl->sdl_nlen + 1 : 0;
 
 			printf("\tlladdr %s\n", link_ntoa(sdl) + n);
@@ -83,13 +102,24 @@ link_getaddr(const char *addr, int which)
 
 	if (which != ADDR)
 		errx(1, "can't set link-level netmask or broadcast");
-	if ((temp = malloc(strlen(addr) + 2)) == NULL)
-		errx(1, "malloc failed");
-	temp[0] = ':';
-	strcpy(temp + 1, addr);
-	sdl.sdl_len = sizeof(sdl);
-	link_addr(temp, &sdl);
-	free(temp);
+	if (!strcmp(addr, "random")) {
+		sdl.sdl_len = sizeof(sdl);
+		sdl.sdl_alen = ETHER_ADDR_LEN;
+		sdl.sdl_nlen = 0;
+		sdl.sdl_family = AF_LINK;
+		arc4random_buf(&sdl.sdl_data, ETHER_ADDR_LEN);
+		/* Non-multicast and claim it is locally administered. */
+		sdl.sdl_data[0] &= 0xfc;
+		sdl.sdl_data[0] |= 0x02;
+	} else {
+		if ((temp = malloc(strlen(addr) + 2)) == NULL)
+			errx(1, "malloc failed");
+		temp[0] = ':';
+		strcpy(temp + 1, addr);
+		sdl.sdl_len = sizeof(sdl);
+		link_addr(temp, &sdl);
+		free(temp);
+	}
 	if (sdl.sdl_alen > sizeof(sa->sa_data))
 		errx(1, "malformed link-level address");
 	sa->sa_family = AF_LINK;
@@ -129,9 +159,6 @@ void
 #endif /* __rtems__ */
 link_ctor(void)
 {
-#ifdef __rtems__
-	memset(&link_ridreq, 0, sizeof(link_ridreq));
-#endif /* __rtems__ */
 	af_register(&af_link);
 	af_register(&af_ether);
 	af_register(&af_lladdr);

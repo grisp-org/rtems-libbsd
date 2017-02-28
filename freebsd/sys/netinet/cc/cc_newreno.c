@@ -64,10 +64,10 @@ __FBSDID("$FreeBSD$");
 
 #include <net/vnet.h>
 
-#include <netinet/cc.h>
+#include <netinet/tcp.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_var.h>
-
+#include <netinet/cc/cc.h>
 #include <netinet/cc/cc_module.h>
 
 static void	newreno_ack_received(struct cc_var *ccv, uint16_t type);
@@ -139,7 +139,8 @@ newreno_ack_received(struct cc_var *ccv, uint16_t type)
 			 */
 			if (CCV(ccv, snd_nxt) == CCV(ccv, snd_max))
 				incr = min(ccv->bytes_this_ack,
-				    V_tcp_abc_l_var * CCV(ccv, t_maxseg));
+				    ccv->nsegs * V_tcp_abc_l_var *
+				    CCV(ccv, t_maxseg));
 			else
 				incr = min(ccv->bytes_this_ack, CCV(ccv, t_maxseg));
 		}
@@ -183,29 +184,41 @@ newreno_after_idle(struct cc_var *ccv)
 static void
 newreno_cong_signal(struct cc_var *ccv, uint32_t type)
 {
-	u_int win;
+	uint32_t cwin, ssthresh_on_loss;
+	u_int mss;
+
+	cwin = CCV(ccv, snd_cwnd);
+	mss = CCV(ccv, t_maxseg);
+	ssthresh_on_loss =
+	    max((CCV(ccv, snd_max) - CCV(ccv, snd_una)) / 2 / mss, 2)
+		* mss;
 
 	/* Catch algos which mistakenly leak private signal types. */
 	KASSERT((type & CC_SIGPRIVMASK) == 0,
 	    ("%s: congestion signal type 0x%08x is private\n", __func__, type));
 
-	win = max(CCV(ccv, snd_cwnd) / 2 / CCV(ccv, t_maxseg), 2) *
-	    CCV(ccv, t_maxseg);
+	cwin = max(cwin / 2 / mss, 2) * mss;
 
 	switch (type) {
 	case CC_NDUPACK:
 		if (!IN_FASTRECOVERY(CCV(ccv, t_flags))) {
-			if (!IN_CONGRECOVERY(CCV(ccv, t_flags)))
-				CCV(ccv, snd_ssthresh) = win;
+			if (!IN_CONGRECOVERY(CCV(ccv, t_flags))) {
+				CCV(ccv, snd_ssthresh) = ssthresh_on_loss;
+				CCV(ccv, snd_cwnd) = cwin;
+			}
 			ENTER_RECOVERY(CCV(ccv, t_flags));
 		}
 		break;
 	case CC_ECN:
 		if (!IN_CONGRECOVERY(CCV(ccv, t_flags))) {
-			CCV(ccv, snd_ssthresh) = win;
-			CCV(ccv, snd_cwnd) = win;
+			CCV(ccv, snd_ssthresh) = ssthresh_on_loss;
+			CCV(ccv, snd_cwnd) = cwin;
 			ENTER_CONGRECOVERY(CCV(ccv, t_flags));
 		}
+		break;
+	case CC_RTO:
+		CCV(ccv, snd_ssthresh) = ssthresh_on_loss;
+		CCV(ccv, snd_cwnd) = mss;
 		break;
 	}
 }
@@ -216,6 +229,9 @@ newreno_cong_signal(struct cc_var *ccv, uint32_t type)
 static void
 newreno_post_recovery(struct cc_var *ccv)
 {
+	int pipe;
+	pipe = 0;
+
 	if (IN_FASTRECOVERY(CCV(ccv, t_flags))) {
 		/*
 		 * Fast recovery will conclude after returning from this
@@ -226,10 +242,13 @@ newreno_post_recovery(struct cc_var *ccv)
 		 *
 		 * XXXLAS: Find a way to do this without needing curack
 		 */
-		if (SEQ_GT(ccv->curack + CCV(ccv, snd_ssthresh),
-		    CCV(ccv, snd_max)))
-			CCV(ccv, snd_cwnd) = CCV(ccv, snd_max) -
-			ccv->curack + CCV(ccv, t_maxseg);
+		if (V_tcp_do_rfc6675_pipe)
+			pipe = tcp_compute_pipe(ccv->ccvc.tcp);
+		else
+			pipe = CCV(ccv, snd_max) - ccv->curack;
+
+		if (pipe < CCV(ccv, snd_ssthresh))
+			CCV(ccv, snd_cwnd) = pipe + CCV(ccv, t_maxseg);
 		else
 			CCV(ccv, snd_cwnd) = CCV(ccv, snd_ssthresh);
 	}

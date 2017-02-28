@@ -47,6 +47,8 @@
 #define	__GLOBL1(sym)	__asm__(".globl " #sym)
 #define	__GLOBL(sym)	__GLOBL1(sym)
 
+#define O_CLOEXEC 0
+
 #define __FreeBSD__ 1
 
 /* General define to activate BSD kernel parts */
@@ -77,5 +79,7 @@ void rtems_bsd_assert_func(const char *file, int line, const char *func, const c
 #define BSD_DEFAULT_GID 0
 
 #define BSD_DEFAULT_PRISON (&prison0)
+
+#define kdb_active 0
 
 #endif /* _RTEMS_BSD_MACHINE_RTEMS_BSD_KERNEL_SPACE_H_ */

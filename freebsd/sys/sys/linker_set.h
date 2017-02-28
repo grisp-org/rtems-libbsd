@@ -43,16 +43,27 @@
  * For ELF, this is done by constructing a separate segment for each set.
  */
 
+#if defined(__powerpc64__)
+/*
+ * Move the symbol pointer from ".text" to ".data" segment, to make
+ * the GCC compiler happy:
+ */
+#define	__MAKE_SET_CONST
+#else
+#define	__MAKE_SET_CONST const
+#endif
+
 /*
  * Private macros, not to be used outside this header file.
  */
 #ifdef __GNUCLIKE___SECTION
 #ifndef __rtems__
-#define __MAKE_SET(set, sym)						\
-	__GLOBL(__CONCAT(__start_set_,set));				\
-	__GLOBL(__CONCAT(__stop_set_,set));				\
-	static void const * const __set_##set##_sym_##sym 		\
-	__section("set_" #set) __used = &sym
+#define __MAKE_SET(set, sym)				\
+	__GLOBL(__CONCAT(__start_set_,set));		\
+	__GLOBL(__CONCAT(__stop_set_,set));		\
+	static void const * __MAKE_SET_CONST		\
+	__set_##set##_sym_##sym __section("set_" #set)	\
+	__used = &(sym)
 #else /* __rtems__ */
 #define RTEMS_BSD_DEFINE_SET(set, type)					\
 	type const __CONCAT(_bsd__start_set_,set)[0]		\
@@ -66,7 +77,11 @@
 
 #define RTEMS_BSD_DEFINE_SET_ITEM(set, sym, type)			\
 	static type const __set_##set##_sym_##sym			\
-	__section(".rtemsroset.bsd." __STRING(set) ".content") __used
+       __section(".rtemsroset.bsd." __STRING(set) ".content.1") __used
+
+#define RTEMS_BSD_DEFINE_SET_ITEM_ORDERED(set, sym, order, type)     \
+	static type const __set_##set##_sym_##sym     \
+       __section(".rtemsroset.bsd." __STRING(set) ".content.0."  RTEMS_XSTRING( order )) __used
 
 #define __MAKE_SET(set, sym)						\
 	RTEMS_BSD_DEFINE_SET_ITEM(set, sym, const void *) = &sym
@@ -111,9 +126,9 @@
  * Initialize before referring to a given linker set.
  */
 #ifndef __rtems__
-#define SET_DECLARE(set, ptype)						\
-	extern ptype *__CONCAT(__start_set_,set);			\
-	extern ptype *__CONCAT(__stop_set_,set)
+#define SET_DECLARE(set, ptype)					\
+	extern ptype __weak_symbol *__CONCAT(__start_set_,set);	\
+	extern ptype __weak_symbol *__CONCAT(__stop_set_,set)
 
 #define SET_BEGIN(set)							\
 	(&__CONCAT(__start_set_,set))

@@ -104,6 +104,8 @@ read_client_conf(void)
 	    [top_level_config.requested_option_count++] = DHO_HOST_NAME;
 	top_level_config.requested_options
 	    [top_level_config.requested_option_count++] = DHO_DOMAIN_SEARCH;
+	top_level_config.requested_options
+	    [top_level_config.requested_option_count++] = DHO_INTERFACE_MTU;
 
 	if ((cfile = fopen(path_dhclient_conf, "r")) != NULL) {
 		do {
@@ -644,6 +646,10 @@ parse_client_lease_declaration(FILE *cfile, struct client_lease *lease,
 	case FILENAME:
 		lease->filename = parse_string(cfile);
 		return;
+	case NEXT_SERVER:
+		if (!parse_ip_addr(cfile, &lease->nextserver))
+			return;
+		break;
 	case SERVER_NAME:
 		lease->server_name = parse_string(cfile);
 		return;

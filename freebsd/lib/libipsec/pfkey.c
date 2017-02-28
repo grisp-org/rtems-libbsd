@@ -1647,7 +1647,7 @@ pfkey_recv(so)
 
 	/* read real message */
 	reallen = PFKEY_UNUNIT64(buf.sadb_msg_len);
-	if ((newmsg = CALLOC(reallen, struct sadb_msg *)) == 0) {
+	if ((newmsg = CALLOC(reallen, struct sadb_msg *)) == NULL) {
 		__ipsec_set_strerror(strerror(errno));
 		return NULL;
 	}
@@ -1778,6 +1778,7 @@ pfkey_align(msg, mhp)
 		case SADB_EXT_SPIRANGE:
 		case SADB_X_EXT_POLICY:
 		case SADB_X_EXT_SA2:
+		case SADB_X_EXT_SA_REPLAY:
 			mhp[ext->sadb_ext_type] = (caddr_t)ext;
 			break;
 		case SADB_X_EXT_NAT_T_TYPE:

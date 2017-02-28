@@ -48,8 +48,8 @@
 #include <sys/systm.h>
 
 #include <net/if.h>
-#include <net/raw_cb.h>
 #include <net/vnet.h>
+#include <net/raw_cb.h>
 
 MTX_SYSINIT(rawcb_mtx, &rawcb_mtx, "rawcb", MTX_DEF);
 
@@ -85,7 +85,7 @@ raw_input_ext(struct mbuf *m0, struct sockproto *proto, struct sockaddr *src,
 	struct mbuf *m = m0;
 	struct socket *last;
 
-	last = 0;
+	last = NULL;
 	mtx_lock(&rawcb_mtx);
 	LIST_FOREACH(rp, &V_rawcb_list, list) {
 		if (rp->rcb_proto.sp_family != proto->sp_family)
@@ -97,7 +97,7 @@ raw_input_ext(struct mbuf *m0, struct sockproto *proto, struct sockaddr *src,
 			continue;
 		if (last) {
 			struct mbuf *n;
-			n = m_copy(m, 0, (int)M_COPYALL);
+			n = m_copym(m, 0, M_COPYALL, M_NOWAIT);
 			if (n) {
 				if (sbappendaddr(&last->so_rcv, src,
 				    n, (struct mbuf *)0) == 0)

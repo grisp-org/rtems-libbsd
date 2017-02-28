@@ -63,11 +63,17 @@
 #define	CLOCK_MONOTONIC_FAST CLOCK_MONOTONIC
 #endif
 
+#ifndef CLOCK_REALTIME_FAST
+#define	CLOCK_REALTIME_FAST CLOCK_REALTIME
+#endif
+
 #ifndef CLOCK_UPTIME
 #define	CLOCK_UPTIME CLOCK_MONOTONIC
 #endif
 
 #define	SIZE_T_MAX SIZE_MAX
+
+#define	__libc_sigprocmask(a, b, c) sigprocmask(a, b, c)
 
 __BEGIN_DECLS
 
@@ -77,6 +83,9 @@ long long strtonum(const char *numstr, long long minval, long long maxval,
 
 /* FIXME: Add to Newlib */
 char *fgetln(FILE *fp, size_t *lenp);
+
+/* FIXME: Add to Newlib */
+int	feature_present(const char *);
 
 __END_DECLS
 

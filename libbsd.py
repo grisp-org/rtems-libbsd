@@ -56,6 +56,8 @@ def rtems(mm):
             'local/usb_if.c',
             'local/mmcbus_if.c',
             'local/mmcbr_if.c',
+            'local/if_dwc_if.c',
+            'local/gpio_if.c',
             'rtems/ipsec_get_policylen.c',
             'rtems/rtems-bsd-arp-processor.c',
             'rtems/rtems-bsd-allocator-domain-size.c',
@@ -67,7 +69,7 @@ def rtems(mm):
             'rtems/rtems-bsd-rc-conf-net.c',
             'rtems/rtems-bsd-rc-conf-pf.c',
             'rtems/rtems-bsd-rc-conf.c',
-            'rtems/rtems-bsd-shell.c',
+            'rtems/rtems-bsd-shell-arp.c',
             'rtems/rtems-bsd-shell-ifconfig.c',
             'rtems/rtems-bsd-shell-netstat.c',
             'rtems/rtems-bsd-shell-pfctl.c',
@@ -75,6 +77,8 @@ def rtems(mm):
             'rtems/rtems-bsd-shell-route.c',
             'rtems/rtems-bsd-shell-sysctl.c',
             'rtems/rtems-bsd-shell-tcpdump.c',
+            'rtems/rtems-bsd-shell-vmstat.c',
+            'rtems/rtems-bsd-shell-wlanstats.c',
             'rtems/rtems-bsd-syscall-api.c',
             'rtems/rtems-kernel-assert.c',
             'rtems/rtems-kernel-autoconf.c',
@@ -105,8 +109,9 @@ def rtems(mm):
             'rtems/rtems-kernel-sysctlbyname.c',
             'rtems/rtems-kernel-sysctl.c',
             'rtems/rtems-kernel-sysctlnametomib.c',
-            'rtems/rtems-kernel-thread.c',
             'rtems/rtems-kernel-timesupport.c',
+            'rtems/rtems-kernel-termioskqueuepoll.c',
+            'rtems/rtems-kernel-thread.c',
             'rtems/rtems-kernel-vprintf.c',
             'rtems/rtems-legacy-rtrequest.c',
             'rtems/rtems-legacy-newproc.c',
@@ -144,6 +149,7 @@ def rtems(mm):
             'pppd/utils.c',
             'sys/dev/usb/controller/ehci_mpc83xx.c',
             'sys/dev/usb/controller/ohci_lpc.c',
+            'sys/dev/usb/controller/ohci_lpc32xx.c',
             'sys/dev/usb/controller/dwc_otg_nexus.c',
             'sys/dev/usb/controller/usb_otg_transceiver.c',
             'sys/dev/usb/controller/usb_otg_transceiver_dump.c',
@@ -162,6 +168,12 @@ def rtems(mm):
             'sys/dev/tsec/if_tsec_nexus.c',
         ],
         mm.generator['source']()
+    )
+    mod.addRTEMSSourceFiles(
+        [
+            'debugger/rtems-debugger-remote-tcp.c',
+        ],
+        mm.generator['source-if-header']('rtems/rtems-debugger.h')
     )
     mod.addFile(mm.generator['file']('rtems/rtems-kernel-kvm-symbols.c',
                                      mm.generator['rtems-path'](),
@@ -204,6 +216,8 @@ def base(mm):
             'sys/security/mac/mac_framework.h',
             'sys/sys/acl.h',
             'sys/sys/aio.h',
+            'sys/sys/_bitset.h',
+            'sys/sys/bitset.h',
             'sys/sys/bitstring.h',
             'sys/sys/bufobj.h',
             'sys/sys/buf_ring.h',
@@ -213,15 +227,22 @@ def base(mm):
             'sys/sys/_callout.h',
             'sys/sys/callout.h',
             'sys/sys/capability.h',
+            'sys/sys/caprights.h',
+            'sys/sys/capsicum.h',
             'sys/sys/condvar.h',
             'sys/sys/conf.h',
+            'sys/sys/counter.h',
             'sys/sys/cpu.h',
+            'sys/sys/_cpuset.h',
             'sys/sys/ctype.h',
             'sys/sys/domain.h',
             'sys/sys/eventhandler.h',
+            'sys/sys/fail.h',
             'sys/sys/filedesc.h',
             'sys/sys/file.h',
+            'sys/sys/firmware.h',
             'sys/sys/fnv_hash.h',
+            'sys/sys/gpio.h',
             'sys/sys/hash.h',
             'sys/sys/hhook.h',
             'sys/sys/interrupt.h',
@@ -231,6 +252,7 @@ def base(mm):
             'sys/sys/kobj.h',
             'sys/sys/kthread.h',
             'sys/sys/ktr.h',
+            'sys/sys/ktr_class.h',
             'sys/sys/libkern.h',
             'sys/sys/limits.h',
             'sys/sys/linker.h',
@@ -252,6 +274,8 @@ def base(mm):
             'sys/sys/_null.h',
             'sys/sys/osd.h',
             'sys/sys/pcpu.h',
+            'sys/sys/_pctrie.h',
+            'sys/sys/pipe.h',
             'sys/sys/priv.h',
             'sys/sys/proc.h',
             'sys/sys/protosw.h',
@@ -271,8 +295,10 @@ def base(mm):
             'sys/sys/sdt.h',
             'sys/sys/selinfo.h',
             'sys/sys/_semaphore.h',
+            'sys/sys/seq.h',
             'sys/sys/sf_buf.h',
             'sys/sys/sigio.h',
+            'sys/sys/signalvar.h',
             'sys/sys/smp.h',
             'sys/sys/sleepqueue.h',
             'sys/sys/_sockaddr_storage.h',
@@ -298,6 +324,8 @@ def base(mm):
             'sys/sys/ucred.h',
             'sys/sys/un.h',
             'sys/sys/unpcb.h',
+            'sys/sys/_unrhdr.h',
+            'sys/sys/uuid.h',
             'sys/sys/vmmeter.h',
             'sys/sys/vnode.h',
             'sys/vm/uma_dbg.h',
@@ -326,14 +354,18 @@ def base(mm):
             'sys/kern/kern_sysctl.c',
             'sys/kern/kern_time.c',
             'sys/kern/kern_timeout.c',
+            'sys/kern/kern_uuid.c',
             'sys/kern/subr_bufring.c',
             'sys/kern/subr_bus.c',
+            'sys/kern/subr_counter.c',
             'sys/kern/subr_eventhandler.c',
+            'sys/kern/subr_firmware.c',
             'sys/kern/subr_hash.c',
             'sys/kern/subr_hints.c',
             'sys/kern/subr_kobj.c',
             'sys/kern/subr_lock.c',
             'sys/kern/subr_module.c',
+            'sys/kern/subr_pcpu.c',
             'sys/kern/subr_prf.c',
             'sys/kern/subr_rman.c',
             'sys/kern/subr_sbuf.c',
@@ -342,17 +374,19 @@ def base(mm):
             'sys/kern/subr_uio.c',
             'sys/kern/subr_unit.c',
             'sys/kern/sys_generic.c',
+            'sys/kern/sys_pipe.c',
             'sys/kern/uipc_accf.c',
             'sys/kern/uipc_domain.c',
             'sys/kern/uipc_mbuf2.c',
             'sys/kern/uipc_mbuf.c',
+            'sys/kern/uipc_mbufhash.c',
             'sys/kern/uipc_sockbuf.c',
             'sys/kern/uipc_socket.c',
             'sys/kern/uipc_usrreq.c',
             'sys/libkern/bcd.c',
-            'sys/libkern/arc4random.c',
-            'sys/libkern/fls.c',
             'sys/libkern/inet_ntoa.c',
+            'sys/libkern/jenkins_hash.c',
+            'sys/libkern/murmur3_32.c',
             'sys/libkern/random.c',
             'sys/vm/uma_core.c',
             'sys/vm/uma_dbg.c',
@@ -626,15 +660,38 @@ def dev_usb_net(mm):
     mod.addDependency(mm['dev_usb'])
     mod.addKernelSpaceHeaderFiles(
         [
-            'sys/dev/mii/mii.h',
-            'sys/dev/mii/miivar.h',
+            'sys/dev/usb/net/if_auereg.h',
+            'sys/dev/usb/net/if_axereg.h',
+            'sys/dev/usb/net/if_axgereg.h',
             'sys/dev/usb/net/if_cdcereg.h',
+            'sys/dev/usb/net/if_cuereg.h',
+            'sys/dev/usb/net/if_iphethvar.h',
+            'sys/dev/usb/net/if_kuefw.h',
+            'sys/dev/usb/net/if_kuereg.h',
+            'sys/dev/usb/net/if_mosreg.h',
+            'sys/dev/usb/net/if_ruereg.h',
+            'sys/dev/usb/net/if_smscreg.h',
+            'sys/dev/usb/net/if_udavreg.h',
+            'sys/dev/usb/net/if_urereg.h',
+            'sys/dev/usb/net/ruephyreg.h',
             'sys/dev/usb/net/usb_ethernet.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
         [
+            'sys/dev/usb/net/if_aue.c',
+            'sys/dev/usb/net/if_axe.c',
+            'sys/dev/usb/net/if_axge.c',
             'sys/dev/usb/net/if_cdce.c',
+            'sys/dev/usb/net/if_cue.c',
+            'sys/dev/usb/net/if_ipheth.c',
+            'sys/dev/usb/net/if_kue.c',
+            'sys/dev/usb/net/if_mos.c',
+            'sys/dev/usb/net/if_rue.c',
+            'sys/dev/usb/net/if_smsc.c',
+            'sys/dev/usb/net/if_udav.c',
+            'sys/dev/usb/net/if_ure.c',
+            'sys/dev/usb/net/ruephy.c',
             'sys/dev/usb/net/usb_ethernet.c',
         ],
         mm.generator['source']()
@@ -762,25 +819,210 @@ def dev_usb_wlan(mm):
     mod.addDependency(mm['dev_usb'])
     mod.addKernelSpaceHeaderFiles(
         [
+            'sys/dev/usb/wlan/if_rsureg.h',
             'sys/dev/usb/wlan/if_rumfw.h',
             'sys/dev/usb/wlan/if_rumreg.h',
             'sys/dev/usb/wlan/if_rumvar.h',
+            'sys/dev/usb/wlan/if_runreg.h',
+            'sys/dev/usb/wlan/if_runvar.h',
             'sys/dev/usb/wlan/if_uathreg.h',
             'sys/dev/usb/wlan/if_uathvar.h',
             'sys/dev/usb/wlan/if_upgtvar.h',
             'sys/dev/usb/wlan/if_uralreg.h',
             'sys/dev/usb/wlan/if_uralvar.h',
+            'sys/dev/usb/wlan/if_urtwreg.h',
+            'sys/dev/usb/wlan/if_urtwvar.h',
             'sys/dev/usb/wlan/if_zydfw.h',
             'sys/dev/usb/wlan/if_zydreg.h',
         ]
     )
+    mod.addRTEMSSourceFiles(
+        [
+            'local/runfw.c',
+        ],
+        mm.generator['source']()
+    )
     mod.addKernelSpaceSourceFiles(
         [
+            'sys/dev/usb/wlan/if_rsu.c',
             'sys/dev/usb/wlan/if_rum.c',
+            'sys/dev/usb/wlan/if_run.c',
             'sys/dev/usb/wlan/if_uath.c',
             'sys/dev/usb/wlan/if_upgt.c',
             'sys/dev/usb/wlan/if_ural.c',
+            'sys/dev/usb/wlan/if_urtw.c',
             'sys/dev/usb/wlan/if_zyd.c',
+        ],
+        mm.generator['source']()
+    )
+    return mod
+
+#
+# WLAN RTWN
+#
+def dev_wlan_rtwn(mm):
+    mod = builder.Module('dev_wlan_rtwn')
+    mod.addDependency(mm['dev_usb'])
+    mod.addKernelSpaceHeaderFiles(
+        [
+            'sys/dev/rtwn/if_rtwn_beacon.h',
+            'sys/dev/rtwn/if_rtwn_calib.h',
+            'sys/dev/rtwn/if_rtwn_cam.h',
+            'sys/dev/rtwn/if_rtwn_debug.h',
+            'sys/dev/rtwn/if_rtwn_efuse.h',
+            'sys/dev/rtwn/if_rtwn_fw.h',
+            'sys/dev/rtwn/if_rtwn_nop.h',
+            'sys/dev/rtwn/if_rtwnreg.h',
+            'sys/dev/rtwn/if_rtwn_ridx.h',
+            'sys/dev/rtwn/if_rtwn_rx.h',
+            'sys/dev/rtwn/if_rtwn_task.h',
+            'sys/dev/rtwn/if_rtwn_tx.h',
+            'sys/dev/rtwn/if_rtwnvar.h',
+            'sys/dev/rtwn/pci/rtwn_pci_attach.h',
+            'sys/dev/rtwn/pci/rtwn_pci_reg.h',
+            'sys/dev/rtwn/pci/rtwn_pci_rx.h',
+            'sys/dev/rtwn/pci/rtwn_pci_tx.h',
+            'sys/dev/rtwn/pci/rtwn_pci_var.h',
+            'sys/dev/rtwn/rtl8188e/r88e_fw_cmd.h',
+            'sys/dev/rtwn/rtl8188e/r88e.h',
+            'sys/dev/rtwn/rtl8188e/r88e_priv.h',
+            'sys/dev/rtwn/rtl8188e/r88e_reg.h',
+            'sys/dev/rtwn/rtl8188e/r88e_rom_defs.h',
+            'sys/dev/rtwn/rtl8188e/r88e_rom_image.h',
+            'sys/dev/rtwn/rtl8188e/r88e_rx_desc.h',
+            'sys/dev/rtwn/rtl8188e/r88e_tx_desc.h',
+            'sys/dev/rtwn/rtl8188e/usb/r88eu.h',
+            'sys/dev/rtwn/rtl8188e/usb/r88eu_reg.h',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce.h',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_priv.h',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_reg.h',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_rx_desc.h',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_tx_desc.h',
+            'sys/dev/rtwn/rtl8192c/r92c_fw_cmd.h',
+            'sys/dev/rtwn/rtl8192c/r92c.h',
+            'sys/dev/rtwn/rtl8192c/r92c_priv.h',
+            'sys/dev/rtwn/rtl8192c/r92c_reg.h',
+            'sys/dev/rtwn/rtl8192c/r92c_rom_defs.h',
+            'sys/dev/rtwn/rtl8192c/r92c_rom_image.h',
+            'sys/dev/rtwn/rtl8192c/r92c_rx_desc.h',
+            'sys/dev/rtwn/rtl8192c/r92c_tx_desc.h',
+            'sys/dev/rtwn/rtl8192c/r92c_var.h',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu.h',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_priv.h',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_reg.h',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_tx_desc.h',
+            'sys/dev/rtwn/rtl8812a/r12a_fw_cmd.h',
+            'sys/dev/rtwn/rtl8812a/r12a.h',
+            'sys/dev/rtwn/rtl8812a/r12a_priv.h',
+            'sys/dev/rtwn/rtl8812a/r12a_reg.h',
+            'sys/dev/rtwn/rtl8812a/r12a_rom_defs.h',
+            'sys/dev/rtwn/rtl8812a/r12a_rom_image.h',
+            'sys/dev/rtwn/rtl8812a/r12a_rx_desc.h',
+            'sys/dev/rtwn/rtl8812a/r12a_tx_desc.h',
+            'sys/dev/rtwn/rtl8812a/r12a_var.h',
+            'sys/dev/rtwn/rtl8812a/usb/r12au.h',
+            'sys/dev/rtwn/rtl8812a/usb/r12au_reg.h',
+            'sys/dev/rtwn/rtl8812a/usb/r12au_tx_desc.h',
+            'sys/dev/rtwn/rtl8821a/r21a.h',
+            'sys/dev/rtwn/rtl8821a/r21a_priv.h',
+            'sys/dev/rtwn/rtl8821a/r21a_reg.h',
+            'sys/dev/rtwn/rtl8821a/usb/r21au.h',
+            'sys/dev/rtwn/rtl8821a/usb/r21au_reg.h',
+            'sys/dev/rtwn/usb/rtwn_usb_attach.h',
+            'sys/dev/rtwn/usb/rtwn_usb_ep.h',
+            'sys/dev/rtwn/usb/rtwn_usb_reg.h',
+            'sys/dev/rtwn/usb/rtwn_usb_rx.h',
+            'sys/dev/rtwn/usb/rtwn_usb_tx.h',
+            'sys/dev/rtwn/usb/rtwn_usb_var.h',
+        ]
+    )
+    mod.addRTEMSSourceFiles(
+        [
+            'local/rtwn-rtl8192cfwT.c',
+        ],
+        mm.generator['source']()
+    )
+    mod.addKernelSpaceSourceFiles(
+        [
+            'sys/dev/rtwn/if_rtwn_beacon.c',
+            'sys/dev/rtwn/if_rtwn.c',
+            'sys/dev/rtwn/if_rtwn_calib.c',
+            'sys/dev/rtwn/if_rtwn_cam.c',
+            'sys/dev/rtwn/if_rtwn_efuse.c',
+            'sys/dev/rtwn/if_rtwn_fw.c',
+            'sys/dev/rtwn/if_rtwn_rx.c',
+            'sys/dev/rtwn/if_rtwn_task.c',
+            'sys/dev/rtwn/if_rtwn_tx.c',
+            'sys/dev/rtwn/pci/rtwn_pci_attach.c',
+            'sys/dev/rtwn/pci/rtwn_pci_reg.c',
+            'sys/dev/rtwn/pci/rtwn_pci_rx.c',
+            'sys/dev/rtwn/pci/rtwn_pci_tx.c',
+            'sys/dev/rtwn/rtl8188e/r88e_beacon.c',
+            'sys/dev/rtwn/rtl8188e/r88e_calib.c',
+            'sys/dev/rtwn/rtl8188e/r88e_chan.c',
+            'sys/dev/rtwn/rtl8188e/r88e_fw.c',
+            'sys/dev/rtwn/rtl8188e/r88e_init.c',
+            'sys/dev/rtwn/rtl8188e/r88e_led.c',
+            'sys/dev/rtwn/rtl8188e/r88e_rf.c',
+            'sys/dev/rtwn/rtl8188e/r88e_rom.c',
+            'sys/dev/rtwn/rtl8188e/r88e_rx.c',
+            'sys/dev/rtwn/rtl8188e/r88e_tx.c',
+            'sys/dev/rtwn/rtl8188e/usb/r88eu_attach.c',
+            'sys/dev/rtwn/rtl8188e/usb/r88eu_init.c',
+            'sys/dev/rtwn/rtl8188e/usb/r88eu_rx.c',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_attach.c',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_calib.c',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_fw.c',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_init.c',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_led.c',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_rx.c',
+            'sys/dev/rtwn/rtl8192c/pci/r92ce_tx.c',
+            'sys/dev/rtwn/rtl8192c/r92c_attach.c',
+            'sys/dev/rtwn/rtl8192c/r92c_beacon.c',
+            'sys/dev/rtwn/rtl8192c/r92c_calib.c',
+            'sys/dev/rtwn/rtl8192c/r92c_chan.c',
+            'sys/dev/rtwn/rtl8192c/r92c_fw.c',
+            'sys/dev/rtwn/rtl8192c/r92c_init.c',
+            'sys/dev/rtwn/rtl8192c/r92c_rf.c',
+            'sys/dev/rtwn/rtl8192c/r92c_rom.c',
+            'sys/dev/rtwn/rtl8192c/r92c_rx.c',
+            'sys/dev/rtwn/rtl8192c/r92c_tx.c',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_attach.c',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_init.c',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_led.c',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_rx.c',
+            'sys/dev/rtwn/rtl8192c/usb/r92cu_tx.c',
+            'sys/dev/rtwn/rtl8812a/r12a_beacon.c',
+            'sys/dev/rtwn/rtl8812a/r12a_calib.c',
+            'sys/dev/rtwn/rtl8812a/r12a_caps.c',
+            'sys/dev/rtwn/rtl8812a/r12a_chan.c',
+            'sys/dev/rtwn/rtl8812a/r12a_fw.c',
+            'sys/dev/rtwn/rtl8812a/r12a_init.c',
+            'sys/dev/rtwn/rtl8812a/r12a_led.c',
+            'sys/dev/rtwn/rtl8812a/r12a_rf.c',
+            'sys/dev/rtwn/rtl8812a/r12a_rom.c',
+            'sys/dev/rtwn/rtl8812a/r12a_rx.c',
+            'sys/dev/rtwn/rtl8812a/r12a_tx.c',
+            'sys/dev/rtwn/rtl8812a/usb/r12au_attach.c',
+            'sys/dev/rtwn/rtl8812a/usb/r12au_init.c',
+            'sys/dev/rtwn/rtl8812a/usb/r12au_rx.c',
+            'sys/dev/rtwn/rtl8812a/usb/r12au_tx.c',
+            'sys/dev/rtwn/rtl8821a/r21a_beacon.c',
+            'sys/dev/rtwn/rtl8821a/r21a_calib.c',
+            'sys/dev/rtwn/rtl8821a/r21a_chan.c',
+            'sys/dev/rtwn/rtl8821a/r21a_fw.c',
+            'sys/dev/rtwn/rtl8821a/r21a_init.c',
+            'sys/dev/rtwn/rtl8821a/r21a_led.c',
+            'sys/dev/rtwn/rtl8821a/r21a_rom.c',
+            'sys/dev/rtwn/rtl8821a/r21a_rx.c',
+            'sys/dev/rtwn/rtl8821a/usb/r21au_attach.c',
+            'sys/dev/rtwn/rtl8821a/usb/r21au_dfs.c',
+            'sys/dev/rtwn/rtl8821a/usb/r21au_init.c',
+            'sys/dev/rtwn/usb/rtwn_usb_attach.c',
+            'sys/dev/rtwn/usb/rtwn_usb_ep.c',
+            'sys/dev/rtwn/usb/rtwn_usb_reg.c',
+            'sys/dev/rtwn/usb/rtwn_usb_rx.c',
+            'sys/dev/rtwn/usb/rtwn_usb_tx.c',
         ],
         mm.generator['source']()
     )
@@ -793,11 +1035,13 @@ def cam(mm):
     mod = builder.Module('cam')
     mod.addKernelSpaceHeaderFiles(
         [
+            'sys/dev/nvme/nvme.h',
             'sys/sys/ata.h',
             'sys/cam/cam.h',
             'sys/cam/cam_ccb.h',
             'sys/cam/cam_sim.h',
             'sys/cam/cam_xpt_sim.h',
+            'sys/cam/nvme/nvme_all.h',
             'sys/cam/scsi/scsi_all.h',
             'sys/cam/scsi/scsi_da.h',
             'sys/cam/ata/ata_all.h',
@@ -836,6 +1080,7 @@ def dev_net(mm):
             'sys/net/if_dl.h',
             'sys/net/if.h',
             'sys/net/if_media.h',
+            'sys/net/ifq.h',
             'sys/net/if_types.h',
             'sys/net/if_var.h',
             'sys/net/vnet.h',
@@ -844,7 +1089,11 @@ def dev_net(mm):
             'sys/dev/tsec/if_tsecreg.h',
             'sys/dev/cadence/if_cgem_hw.h',
             'sys/dev/dwc/if_dwc.h',
+            'sys/dev/dwc/if_dwcvar.h',
             'sys/arm/xilinx/zy7_slcr.h',
+            'sys/arm/lpc/if_lpereg.h',
+            'sys/arm/lpc/lpcreg.h',
+            'sys/arm/lpc/lpcvar.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
@@ -863,6 +1112,8 @@ def dev_net(mm):
             'sys/dev/cadence/if_cgem.c',
             'sys/dev/dwc/if_dwc.c',
             'sys/arm/xilinx/zy7_slcr.c',
+            'sys/arm/lpc/lpc_pwr.c',
+            'sys/arm/lpc/if_lpe.c',
         ],
         mm.generator['source']()
     )
@@ -876,7 +1127,6 @@ def dev_nic(mm):
     mod.addKernelSpaceHeaderFiles(
         [
             'sys/sys/pciio.h',
-            'sys/dev/random/randomdev_soft.h',
             'sys/sys/eventvar.h',
             'sys/sys/kenv.h',
             'sys/isa/isavar.h',
@@ -910,7 +1160,6 @@ def dev_nic(mm):
     )
     mod.addKernelSpaceSourceFiles(
         [
-            'sys/dev/random/harvest.c',
             'sys/netinet/tcp_hostcache.c',
             'sys/dev/led/led.c',
         ],
@@ -925,7 +1174,7 @@ def dev_nic_re(mm):
     mod = builder.Module('dev_nic_re')
     mod.addKernelSpaceHeaderFiles(
         [
-            'sys/pci/if_rlreg.h',
+            'sys/dev/rl/if_rlreg.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
@@ -1130,7 +1379,6 @@ def net(mm):
             'sys/net/if_media.h',
             'sys/net/if_mib.h',
             'sys/net/if_sppp.h',
-            'sys/net/if_stf.h',
             'sys/net/if_tap.h',
             'sys/net/if_tapvar.h',
             'sys/net/if_tun.h',
@@ -1147,8 +1395,13 @@ def net(mm):
             'sys/net/radix_mpath.h',
             'sys/net/raw_cb.h',
             'sys/net/route.h',
+            'sys/net/route_var.h',
+            'sys/net/rss_config.h',
+            'sys/net/sff8436.h',
+            'sys/net/sff8472.h',
             'sys/net/slcompress.h',
             'sys/net/vnet.h',
+            'sys/netgraph/ng_socket.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
@@ -1163,10 +1416,8 @@ def net(mm):
             'sys/net/if_dead.c',
             'sys/net/if_disc.c',
             'sys/net/if_edsc.c',
-            'sys/net/if_ef.c',
             'sys/net/if_enc.c',
             'sys/net/if_epair.c',
-            'sys/net/if_faith.c',
             'sys/net/if_fddisubr.c',
             'sys/net/if_fwsubr.c',
             'sys/net/if_gif.c',
@@ -1210,17 +1461,19 @@ def netinet(mm):
     mod = builder.Module('netinet')
     mod.addKernelSpaceHeaderFiles(
         [
-            'sys/netinet/cc.h',
+            'sys/netinet/cc/cc.h',
             'sys/netinet/cc/cc_module.h',
+            'sys/netinet/in_fib.h',
             'sys/netinet/icmp6.h',
             'sys/netinet/icmp_var.h',
             'sys/netinet/if_atm.h',
             'sys/netinet/if_ether.h',
             'sys/netinet/igmp.h',
             'sys/netinet/igmp_var.h',
-            'sys/netinet/in_gif.h',
             'sys/netinet/in.h',
+            'sys/netinet/in_kdtrace.h',
             'sys/netinet/in_pcb.h',
+            'sys/netinet/in_rss.h',
             'sys/netinet/in_systm.h',
             'sys/netinet/in_var.h',
             'sys/netinet/ip6.h',
@@ -1230,17 +1483,12 @@ def netinet(mm):
             'sys/netinet/ip_ecn.h',
             'sys/netinet/ip_encap.h',
             'sys/netinet/ip_fw.h',
-            'sys/netinet/ip_gre.h',
             'sys/netinet/ip.h',
             'sys/netinet/ip_icmp.h',
             'sys/netinet/ip_ipsec.h',
             'sys/netinet/ip_mroute.h',
             'sys/netinet/ip_options.h',
             'sys/netinet/ip_var.h',
-            'sys/netpfil/ipfw/dn_heap.h',
-            'sys/netpfil/ipfw/dn_sched.h',
-            'sys/netpfil/ipfw/ip_dn_private.h',
-            'sys/netpfil/ipfw/ip_fw_private.h',
             'sys/netinet/pim.h',
             'sys/netinet/pim_var.h',
             'sys/netinet/sctp_asconf.h',
@@ -1279,6 +1527,7 @@ def netinet(mm):
             'sys/netinet/tcp_var.h',
             'sys/netinet/toecore.h',
             'sys/netinet/udp.h',
+            'sys/netinet/udplite.h',
             'sys/netinet/udp_var.h',
             'sys/netinet/libalias/alias_local.h',
             'sys/netinet/libalias/alias.h',
@@ -1298,6 +1547,7 @@ def netinet(mm):
             'sys/netinet/if_ether.c',
             'sys/netinet/igmp.c',
             'sys/netinet/in.c',
+            'sys/netinet/in_fib.c',
             'sys/netinet/in_gif.c',
             'sys/netinet/in_mcast.c',
             'sys/netinet/in_pcb.c',
@@ -1315,6 +1565,7 @@ def netinet(mm):
             'sys/netinet/ip_mroute.c',
             'sys/netinet/ip_options.c',
             'sys/netinet/ip_output.c',
+            'sys/netinet/ip_reass.c',
             'sys/netinet/raw_ip.c',
             'sys/netinet/sctp_asconf.c',
             'sys/netinet/sctp_auth.c',
@@ -1343,22 +1594,6 @@ def netinet(mm):
             'sys/netinet/tcp_timer.c',
             'sys/netinet/tcp_timewait.c',
             'sys/netinet/tcp_usrreq.c',
-            'sys/netpfil/ipfw/dn_heap.c',
-            'sys/netpfil/ipfw/dn_sched_fifo.c',
-            'sys/netpfil/ipfw/dn_sched_prio.c',
-            'sys/netpfil/ipfw/dn_sched_qfq.c',
-            'sys/netpfil/ipfw/dn_sched_rr.c',
-            'sys/netpfil/ipfw/dn_sched_wf2q.c',
-            'sys/netpfil/ipfw/ip_dn_glue.c',
-            'sys/netpfil/ipfw/ip_dn_io.c',
-            'sys/netpfil/ipfw/ip_dummynet.c',
-            'sys/netpfil/ipfw/ip_fw2.c',
-            #'sys/netpfil/ipfw/ip_fw_dynamic.c',
-            'sys/netpfil/ipfw/ip_fw_log.c',
-            'sys/netpfil/ipfw/ip_fw_nat.c',
-            'sys/netpfil/ipfw/ip_fw_pfil.c',
-            'sys/netpfil/ipfw/ip_fw_sockopt.c',
-            'sys/netpfil/ipfw/ip_fw_table.c',
             'sys/netinet/udp_usrreq.c',
             'sys/netinet/libalias/alias_dummy.c',
             'sys/netinet/libalias/alias_pptp.c',
@@ -1387,10 +1622,11 @@ def netinet6(mm):
     mod.addKernelSpaceHeaderFiles(
         [
             'sys/netinet6/icmp6.h',
-            'sys/netinet6/in6_gif.h',
+            'sys/netinet6/in6_fib.h',
             'sys/netinet6/in6.h',
             'sys/netinet6/in6_ifattach.h',
             'sys/netinet6/in6_pcb.h',
+            'sys/netinet6/in6_rss.h',
             'sys/netinet6/in6_var.h',
             'sys/netinet6/ip6_ecn.h',
             'sys/netinet6/ip6.h',
@@ -1419,6 +1655,7 @@ def netinet6(mm):
             'sys/netinet6/icmp6.c',
             'sys/netinet6/in6.c',
             'sys/netinet6/in6_cksum.c',
+            'sys/netinet6/in6_fib.c',
             'sys/netinet6/in6_gif.c',
             'sys/netinet6/in6_ifattach.c',
             'sys/netinet6/in6_mcast.c',
@@ -1426,6 +1663,7 @@ def netinet6(mm):
             'sys/netinet6/in6_proto.c',
             'sys/netinet6/in6_rmx.c',
             'sys/netinet6/in6_src.c',
+            'sys/netinet6/ip6_fastfwd.c',
             'sys/netinet6/ip6_forward.c',
             'sys/netinet6/ip6_id.c',
             'sys/netinet6/ip6_input.c',
@@ -1500,12 +1738,13 @@ def net80211(mm):
             'sys/net80211/ieee80211_action.h',
             'sys/net80211/ieee80211_adhoc.h',
             'sys/net80211/ieee80211_ageq.h',
+            'sys/net80211/ieee80211_alq.h',
             'sys/net80211/ieee80211_amrr.h',
             'sys/net80211/ieee80211_crypto.h',
             'sys/net80211/ieee80211_dfs.h',
             'sys/net80211/ieee80211_freebsd.h',
-            'sys/net80211/_ieee80211.h',
             'sys/net80211/ieee80211.h',
+            'sys/net80211/_ieee80211.h',
             'sys/net80211/ieee80211_hostap.h',
             'sys/net80211/ieee80211_ht.h',
             'sys/net80211/ieee80211_input.h',
@@ -1521,6 +1760,7 @@ def net80211(mm):
             'sys/net80211/ieee80211_regdomain.h',
             'sys/net80211/ieee80211_rssadapt.h',
             'sys/net80211/ieee80211_scan.h',
+            'sys/net80211/ieee80211_scan_sw.h',
             'sys/net80211/ieee80211_sta.h',
             'sys/net80211/ieee80211_superg.h',
             'sys/net80211/ieee80211_tdma.h',
@@ -1563,6 +1803,7 @@ def net80211(mm):
             'sys/net80211/ieee80211_rssadapt.c',
             'sys/net80211/ieee80211_scan.c',
             'sys/net80211/ieee80211_scan_sta.c',
+            'sys/net80211/ieee80211_scan_sw.c',
             'sys/net80211/ieee80211_sta.c',
             'sys/net80211/ieee80211_superg.c',
             'sys/net80211/ieee80211_tdma.c',
@@ -1580,26 +1821,34 @@ def opencrypto(mm):
     mod = builder.Module('opencrypto')
     mod.addKernelSpaceHeaderFiles(
         [
-            'sys/opencrypto/deflate.h',
-            'sys/opencrypto/xform.h',
-            'sys/opencrypto/cryptosoft.h',
-            'sys/opencrypto/rmd160.h',
-            'sys/opencrypto/cryptodev.h',
-            'sys/opencrypto/castsb.h',
-            'sys/opencrypto/skipjack.h',
             'sys/opencrypto/cast.h',
+            'sys/opencrypto/castsb.h',
+            'sys/opencrypto/cryptodev.h',
+            'sys/opencrypto/cryptosoft.h',
+            'sys/opencrypto/deflate.h',
+            'sys/opencrypto/gfmult.h',
+            'sys/opencrypto/gmac.h',
+            'sys/opencrypto/rmd160.h',
+            'sys/opencrypto/skipjack.h',
+            'sys/opencrypto/xform_auth.h',
+            'sys/opencrypto/xform_comp.h',
+            'sys/opencrypto/xform_enc.h',
+            'sys/opencrypto/xform.h',
+            'sys/opencrypto/xform_userland.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
         [
-      'sys/opencrypto/crypto.c',
-            'sys/opencrypto/deflate.c',
-            'sys/opencrypto/cryptosoft.c',
-            'sys/opencrypto/criov.c',
-            'sys/opencrypto/rmd160.c',
-            'sys/opencrypto/xform.c',
-            'sys/opencrypto/skipjack.c',
             'sys/opencrypto/cast.c',
+            'sys/opencrypto/criov.c',
+            'sys/opencrypto/crypto.c',
+            'sys/opencrypto/cryptodeflate.c',
+            'sys/opencrypto/cryptosoft.c',
+            'sys/opencrypto/gfmult.c',
+            'sys/opencrypto/gmac.c',
+            'sys/opencrypto/rmd160.c',
+            'sys/opencrypto/skipjack.c',
+            'sys/opencrypto/xform.c',
         ],
         mm.generator['source']()
     )
@@ -1612,46 +1861,52 @@ def crypto(mm):
     mod = builder.Module('crypto')
     mod.addKernelSpaceHeaderFiles(
         [
-            #'crypto/aesni/aesni.h',
+            'sys/crypto/skein/skein_iv.h',
+            'sys/crypto/skein/skein_freebsd.h',
+            'sys/crypto/skein/skein.h',
+            'sys/crypto/skein/skein_debug.h',
+            'sys/crypto/skein/skein_port.h',
+            'sys/crypto/rc4/rc4.h',
+            'sys/crypto/sha2/sha384.h',
+            'sys/crypto/sha2/sha256.h',
+            'sys/crypto/sha2/sha512t.h',
+            'sys/crypto/sha2/sha512.h',
             'sys/crypto/sha1.h',
-            'sys/crypto/sha2/sha2.h',
-            'sys/crypto/rijndael/rijndael.h',
-            'sys/crypto/rijndael/rijndael_local.h',
+            'sys/crypto/siphash/siphash.h',
             'sys/crypto/rijndael/rijndael-api-fst.h',
-            'sys/crypto/des/des.h',
+            'sys/crypto/rijndael/rijndael_local.h',
+            'sys/crypto/rijndael/rijndael.h',
+            'sys/crypto/camellia/camellia.h',
             'sys/crypto/des/spr.h',
+            'sys/crypto/des/des_locl.h',
+            'sys/crypto/des/des.h',
             'sys/crypto/des/podd.h',
             'sys/crypto/des/sk.h',
-            'sys/crypto/des/des_locl.h',
             'sys/crypto/blowfish/bf_pi.h',
-            'sys/crypto/blowfish/bf_locl.h',
             'sys/crypto/blowfish/blowfish.h',
-            'sys/crypto/rc4/rc4.h',
-            #'crypto/via/padlock.h',
-            'sys/crypto/camellia/camellia.h',
+            'sys/crypto/blowfish/bf_locl.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
         [
-            #'crypto/aesni/aesni.c',
-            #'crypto/aesni/aesni_wrap.c',
-            'sys/crypto/sha1.c',
-            'sys/crypto/sha2/sha2.c',
-            'sys/crypto/rijndael/rijndael-alg-fst.c',
-            'sys/crypto/rijndael/rijndael-api.c',
-            'sys/crypto/rijndael/rijndael-api-fst.c',
-            'sys/crypto/des/des_setkey.c',
-            'sys/crypto/des/des_enc.c',
-            'sys/crypto/des/des_ecb.c',
-            'sys/crypto/blowfish/bf_enc.c',
-            'sys/crypto/blowfish/bf_skey.c',
-            'sys/crypto/blowfish/bf_ecb.c',
+            'sys/crypto/skein/skein_block.c',
+            'sys/crypto/skein/skein.c',
             'sys/crypto/rc4/rc4.c',
-            #'crypto/via/padlock.c',
-            #'crypto/via/padlock_cipher.c',
-            #'crypto/via/padlock_hash.c',
+            'sys/crypto/sha2/sha256c.c',
+            'sys/crypto/sha2/sha512c.c',
+            'sys/crypto/siphash/siphash.c',
+            'sys/crypto/sha1.c',
+            'sys/crypto/rijndael/rijndael-api.c',
+            'sys/crypto/rijndael/rijndael-alg-fst.c',
+            'sys/crypto/rijndael/rijndael-api-fst.c',
             'sys/crypto/camellia/camellia-api.c',
             'sys/crypto/camellia/camellia.c',
+            'sys/crypto/des/des_enc.c',
+            'sys/crypto/des/des_setkey.c',
+            'sys/crypto/des/des_ecb.c',
+            'sys/crypto/blowfish/bf_skey.c',
+            'sys/crypto/blowfish/bf_enc.c',
+            'sys/crypto/blowfish/bf_ecb.c',
         ],
         mm.generator['source']()
     )
@@ -1664,31 +1919,34 @@ def altq(mm):
     mod = builder.Module('altq')
     mod.addKernelSpaceHeaderFiles(
         [
-            'sys/contrib/altq/altq/altq_rmclass.h',
-            'sys/contrib/altq/altq/altq_cbq.h',
-            'sys/contrib/altq/altq/altq_var.h',
-            'sys/contrib/altq/altq/altqconf.h',
-            'sys/contrib/altq/altq/altq.h',
-            'sys/contrib/altq/altq/altq_hfsc.h',
-            'sys/contrib/altq/altq/altq_red.h',
-            'sys/contrib/altq/altq/altq_classq.h',
-            'sys/contrib/altq/altq/altq_priq.h',
-            'sys/contrib/altq/altq/altq_rmclass_debug.h',
-            'sys/contrib/altq/altq/altq_cdnr.h',
-            'sys/contrib/altq/altq/altq_rio.h',
-            'sys/contrib/altq/altq/if_altq.h',
+            'sys/net/altq/altq_cbq.h',
+            'sys/net/altq/altq_cdnr.h',
+            'sys/net/altq/altq_classq.h',
+            'sys/net/altq/altq_codel.h',
+            'sys/net/altq/altq_fairq.h',
+            'sys/net/altq/altq.h',
+            'sys/net/altq/altq_hfsc.h',
+            'sys/net/altq/altq_priq.h',
+            'sys/net/altq/altq_red.h',
+            'sys/net/altq/altq_rio.h',
+            'sys/net/altq/altq_rmclass_debug.h',
+            'sys/net/altq/altq_rmclass.h',
+            'sys/net/altq/altq_var.h',
+            'sys/net/altq/if_altq.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
         [
-            'sys/contrib/altq/altq/altq_rmclass.c',
-            'sys/contrib/altq/altq/altq_rio.c',
-            'sys/contrib/altq/altq/altq_subr.c',
-            'sys/contrib/altq/altq/altq_cdnr.c',
-            'sys/contrib/altq/altq/altq_priq.c',
-            'sys/contrib/altq/altq/altq_cbq.c',
-            'sys/contrib/altq/altq/altq_hfsc.c',
-            'sys/contrib/altq/altq/altq_red.c',
+            'sys/net/altq/altq_cbq.c',
+            'sys/net/altq/altq_cdnr.c',
+            'sys/net/altq/altq_codel.c',
+            'sys/net/altq/altq_fairq.c',
+            'sys/net/altq/altq_hfsc.c',
+            'sys/net/altq/altq_priq.c',
+            'sys/net/altq/altq_red.c',
+            'sys/net/altq/altq_rio.c',
+            'sys/net/altq/altq_rmclass.c',
+            'sys/net/altq/altq_subr.c',
         ],
         mm.generator['source']()
     )
@@ -1701,26 +1959,77 @@ def pf(mm):
     mod = builder.Module('pf')
     mod.addKernelSpaceHeaderFiles(
         [
-            'sys/contrib/pf/net/if_pflog.h',
-            'sys/contrib/pf/net/if_pflow.h',
-            'sys/contrib/pf/net/if_pfsync.h',
-            'sys/contrib/pf/net/pfvar.h',
-            'sys/contrib/pf/net/pf_mtag.h',
+            'sys/net/if_pflog.h',
+            'sys/net/if_pfsync.h',
+            'sys/net/pfvar.h',
+            'sys/netpfil/pf/pf_altq.h',
+            'sys/netpfil/pf/pf.h',
+            'sys/netpfil/pf/pf_mtag.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
         [
-            'sys/contrib/pf/net/if_pflog.c',
-            'sys/contrib/pf/net/if_pfsync.c',
-            'sys/contrib/pf/net/pf.c',
-            'sys/contrib/pf/net/pf_if.c',
-            'sys/contrib/pf/net/pf_ioctl.c',
-            'sys/contrib/pf/net/pf_lb.c',
-            'sys/contrib/pf/net/pf_norm.c',
-            'sys/contrib/pf/net/pf_osfp.c',
-            'sys/contrib/pf/net/pf_ruleset.c',
-            'sys/contrib/pf/net/pf_table.c',
-            'sys/contrib/pf/netinet/in4_cksum.c',
+            'sys/netpfil/pf/if_pflog.c',
+            'sys/netpfil/pf/if_pfsync.c',
+            'sys/netpfil/pf/in4_cksum.c',
+            'sys/netpfil/pf/pf.c',
+            'sys/netpfil/pf/pf_if.c',
+            'sys/netpfil/pf/pf_ioctl.c',
+            'sys/netpfil/pf/pf_lb.c',
+            'sys/netpfil/pf/pf_norm.c',
+            'sys/netpfil/pf/pf_osfp.c',
+            'sys/netpfil/pf/pf_ruleset.c',
+            'sys/netpfil/pf/pf_table.c',
+        ],
+        mm.generator['source']()
+    )
+    return mod
+
+def ipfw(mm):
+    mod = builder.Module('ipfw')
+    mod.addKernelSpaceHeaderFiles(
+        [
+            'sys/netinet6/ip_fw_nat64.h',
+            'sys/netinet6/ip_fw_nptv6.h',
+            'sys/netpfil/ipfw/dn_aqm_codel.h',
+            'sys/netpfil/ipfw/dn_aqm.h',
+            'sys/netpfil/ipfw/dn_aqm_pie.h',
+            'sys/netpfil/ipfw/dn_heap.h',
+            'sys/netpfil/ipfw/dn_sched_fq_codel.h',
+            'sys/netpfil/ipfw/dn_sched_fq_codel_helper.h',
+            'sys/netpfil/ipfw/dn_sched.h',
+            'sys/netpfil/ipfw/ip_dn_private.h',
+            'sys/netpfil/ipfw/ip_fw_private.h',
+            'sys/netpfil/ipfw/ip_fw_table.h',
+            'sys/netpfil/ipfw/nat64/ip_fw_nat64.h',
+            'sys/netpfil/ipfw/nat64/nat64lsn.h',
+            'sys/netpfil/ipfw/nat64/nat64stl.h',
+            'sys/netpfil/ipfw/nat64/nat64_translate.h',
+            'sys/netpfil/ipfw/nptv6/nptv6.h',
+        ]
+    )
+    mod.addKernelSpaceSourceFiles(
+        [
+            'sys/netpfil/ipfw/ip_fw2.c',
+            'sys/netpfil/ipfw/ip_fw_bpf.c',
+            'sys/netpfil/ipfw/ip_fw_dynamic.c',
+            'sys/netpfil/ipfw/ip_fw_eaction.c',
+            'sys/netpfil/ipfw/ip_fw_iface.c',
+            'sys/netpfil/ipfw/ip_fw_log.c',
+            'sys/netpfil/ipfw/ip_fw_nat.c',
+            'sys/netpfil/ipfw/ip_fw_pfil.c',
+            'sys/netpfil/ipfw/ip_fw_sockopt.c',
+            'sys/netpfil/ipfw/ip_fw_table_algo.c',
+            'sys/netpfil/ipfw/ip_fw_table.c',
+            'sys/netpfil/ipfw/ip_fw_table_value.c',
+            'sys/netpfil/ipfw/nat64/ip_fw_nat64.c',
+            'sys/netpfil/ipfw/nat64/nat64lsn.c',
+            'sys/netpfil/ipfw/nat64/nat64lsn_control.c',
+            'sys/netpfil/ipfw/nat64/nat64stl.c',
+            'sys/netpfil/ipfw/nat64/nat64stl_control.c',
+            'sys/netpfil/ipfw/nat64/nat64_translate.c',
+            'sys/netpfil/ipfw/nptv6/ip_fw_nptv6.c',
+            'sys/netpfil/ipfw/nptv6/nptv6.c',
         ],
         mm.generator['source']()
     )
@@ -1773,8 +2082,13 @@ def user_space(mm):
     mod = builder.Module('user_space')
     mod.addUserSpaceHeaderFiles(
         [
-            'contrib/pf/pfctl/pfctl.h',
-            'contrib/pf/pfctl/pfctl_parser.h',
+            'contrib/libxo/libxo/xo_buf.h',
+            'contrib/libxo/libxo/xo_encoder.h',
+            'contrib/libxo/libxo/xo.h',
+            'contrib/libxo/libxo/xo_humanize.h',
+            'contrib/libxo/libxo/xo_wcwidth.h',
+            'sbin/pfctl/pfctl.h',
+            'sbin/pfctl/pfctl_parser.h',
             'include/arpa/ftp.h',
             'include/arpa/inet.h',
             'include/arpa/nameser_compat.h',
@@ -1822,6 +2136,8 @@ def user_space(mm):
             'include/rpcsvc/ypclnt.h',
             'include/rpcsvc/yp_prot.h',
             'include/sysexits.h',
+            'lib/lib80211/lib80211_ioctl.h',
+            'lib/lib80211/lib80211_regdomain.h',
             'lib/libc/db/btree/btree.h',
             'lib/libc/db/btree/extern.h',
             'lib/libc/db/recno/extern.h',
@@ -1859,7 +2175,6 @@ def user_space(mm):
             'sbin/dhclient/privsep.h',
             'sbin/dhclient/tree.h',
             'sbin/ifconfig/ifconfig.h',
-            'sbin/ifconfig/regdomain.h',
             'usr.bin/netstat/netstat.h'
         ]
     )
@@ -1878,7 +2193,7 @@ def user_space(mm):
                                      mm.generator['convert'](),
                                      mm.generator['convert'](),
                                      mm.generator['route-keywords']()))
-    mod.addFile(mm.generator['file']('contrib/pf/pfctl/parse.y',
+    mod.addFile(mm.generator['file']('sbin/pfctl/parse.y',
                                      mm.generator['freebsd-path'](),
                                      mm.generator['convert'](),
                                      mm.generator['convert'](),
@@ -1913,18 +2228,24 @@ def user_space(mm):
         ],
         mm.generator['source']('-D__DBINTERFACE_PRIVATE -DINET6')
     )
+    mod.addRTEMSHeaderFiles(
+        [
+            'include/machine/rtems-bsd-regdomain.h',
+        ]
+    )
+    mod.addRTEMSSourceFiles(
+        [
+            'rtems/rtems-bsd-regdomain.c',
+        ],
+        mm.generator['source']()
+    )
     mod.addUserSpaceSourceFiles(
         [
             'bin/hostname/hostname.c',
-            'contrib/pf/pfctl/pfctl_altq.c',
-            'contrib/pf/pfctl/pfctl.c',
-            'contrib/pf/pfctl/pfctl_optimize.c',
-            'contrib/pf/pfctl/pfctl_osfp.c',
-            'contrib/pf/pfctl/pfctl_parser.c',
-            'contrib/pf/pfctl/pfctl_qstats.c',
-            'contrib/pf/pfctl/pfctl_radix.c',
-            'contrib/pf/pfctl/pfctl_table.c',
-            'contrib/pf/pfctl/pf_print_state.c',
+            'contrib/libxo/libxo/libxo.c',
+            'contrib/libxo/libxo/xo_encoder.c',
+            'lib/lib80211/lib80211_ioctl.c',
+            'lib/lib80211/lib80211_regdomain.c',
             'lib/libc/gen/err.c',
             'lib/libc/gen/feature_present.c',
             'lib/libc/gen/getdomainname.c',
@@ -2100,26 +2421,38 @@ def user_space(mm):
             'sbin/ifconfig/af_link.c',
             'sbin/ifconfig/af_nd6.c',
             'sbin/ifconfig/ifbridge.c',
-            'sbin/ifconfig/ifcarp.c',
             'sbin/ifconfig/ifclone.c',
             'sbin/ifconfig/ifconfig.c',
             'sbin/ifconfig/ifgif.c',
             'sbin/ifconfig/ifgre.c',
             'sbin/ifconfig/ifgroup.c',
+            'sbin/ifconfig/ifieee80211.c',
             'sbin/ifconfig/iflagg.c',
             'sbin/ifconfig/ifmac.c',
             'sbin/ifconfig/ifmedia.c',
             'sbin/ifconfig/ifpfsync.c',
             'sbin/ifconfig/ifvlan.c',
+            'sbin/ifconfig/sfp.c',
+            'sbin/pfctl/pfctl_altq.c',
+            'sbin/pfctl/pfctl.c',
+            'sbin/pfctl/pfctl_optimize.c',
+            'sbin/pfctl/pfctl_osfp.c',
+            'sbin/pfctl/pfctl_parser.c',
+            'sbin/pfctl/pfctl_qstats.c',
+            'sbin/pfctl/pfctl_radix.c',
+            'sbin/pfctl/pfctl_table.c',
+            'sbin/pfctl/pf_print_state.c',
             'sbin/ping6/ping6.c',
             'sbin/ping/ping.c',
             'sbin/route/route.c',
             'sbin/sysctl/sysctl.c',
             'usr.bin/netstat/bpf.c',
+            'usr.bin/netstat/flowtable.c',
             'usr.bin/netstat/if.c',
             'usr.bin/netstat/inet6.c',
             'usr.bin/netstat/inet.c',
             'usr.bin/netstat/ipsec.c',
+            'usr.bin/netstat/nl_symbols.c',
             'usr.bin/netstat/main.c',
             'usr.bin/netstat/mbuf.c',
             'usr.bin/netstat/mroute6.c',
@@ -2128,8 +2461,70 @@ def user_space(mm):
             'usr.bin/netstat/pfkey.c',
             'usr.bin/netstat/sctp.c',
             'usr.bin/netstat/unix.c',
+            'usr.bin/vmstat/vmstat.c',
+            'usr.sbin/arp/arp.c',
         ],
-        mm.generator['source']('-DINET6')
+        mm.generator['source'](['-DINET6', '-DINET'])
+    )
+    return mod
+
+#
+# User space: wlanstats utility
+#
+def user_space_wlanstats(mm):
+    mod = builder.Module('user_space_wlanstats')
+    mod.addUserSpaceHeaderFiles(
+        [
+            'tools/tools/net80211/wlanstats/wlanstats.h',
+            'lib/libbsdstat/bsdstat.h',
+        ]
+    )
+    mod.addUserSpaceSourceFiles(
+        [
+            'tools/tools/net80211/wlanstats/main.c',
+            'tools/tools/net80211/wlanstats/wlanstats.c',
+            'lib/libbsdstat/bsdstat.c',
+        ],
+        mm.generator['source'](['-DINET6', '-DINET'])
+    )
+    return mod
+
+#
+# Contrib expat
+#
+def contrib_expat(mm):
+    mod = builder.Module('contrib_expat')
+    cflags = ['-DHAVE_MEMMOVE=1']
+    mod.addRTEMSHeaderFiles(
+        [
+            'include/bsdxml.h',
+        ]
+    )
+    mod.addUserSpaceHeaderFiles(
+        [
+            'contrib/expat/lib/ascii.h',
+            'contrib/expat/lib/asciitab.h',
+            'contrib/expat/lib/expat_external.h',
+            'contrib/expat/lib/expat.h',
+            'contrib/expat/lib/iasciitab.h',
+            'contrib/expat/lib/internal.h',
+            'contrib/expat/lib/latin1tab.h',
+            'contrib/expat/lib/nametab.h',
+            'contrib/expat/lib/utf8tab.h',
+            'contrib/expat/lib/xmlrole.h',
+            'contrib/expat/lib/xmltok.h',
+            'contrib/expat/lib/xmltok_impl.h',
+        ]
+    )
+    mod.addUserSpaceSourceFiles(
+        [
+            'contrib/expat/lib/xmlparse.c',
+            'contrib/expat/lib/xmlrole.c',
+            'contrib/expat/lib/xmltok.c',
+            'contrib/expat/lib/xmltok_impl.c',
+            'contrib/expat/lib/xmltok_ns.c',
+        ],
+        mm.generator['source'](cflags)
     )
     return mod
 
@@ -2565,6 +2960,8 @@ def tests(mm):
     mod.addTest(mm.generator['test']('cdev01', ['test_main', 'test_cdev']))
     mod.addTest(mm.generator['test']('pf01', ['test_main']))
     mod.addTest(mm.generator['test']('pf02', ['test_main'], runTest = False))
+    mod.addTest(mm.generator['test-if-header']('debugger01', 'rtems/rtems-debugger.h',
+                                               ['test_main'], runTest = False, netTest = True))
     return mod
 
 #
@@ -2661,8 +3058,9 @@ def sources(mm):
     #mm.addModule(dev_usb_input(mm))
     #mm.addModule(dev_usb_mouse(mm))
     #mm.addModule(dev_usb_serial(mm))
-    #mm.addModule(dev_usb_net(mm))
-    #mm.addModule(dev_usb_wlan(mm))
+    mm.addModule(dev_usb_net(mm))
+    mm.addModule(dev_usb_wlan(mm))
+    mm.addModule(dev_wlan_rtwn(mm))
 
     mm.addModule(cam(mm))
     mm.addModule(dev_usb_storage(mm))
@@ -2674,11 +3072,12 @@ def sources(mm):
     mm.addModule(netinet(mm))
     mm.addModule(netinet6(mm))
     #mm.addModule(netipsec(mm))
-    #mm.addModule(net80211(mm))
+    mm.addModule(net80211(mm))
     mm.addModule(opencrypto(mm))
     mm.addModule(crypto(mm))
     mm.addModule(altq(mm))
     mm.addModule(pf(mm))
+    mm.addModule(ipfw(mm))
     mm.addModule(dev_net(mm))
 
     # Add PCI
@@ -2699,6 +3098,8 @@ def sources(mm):
     mm.addModule(in_cksum(mm))
 
     mm.addModule(user_space(mm))
+    mm.addModule(user_space_wlanstats(mm))
+    mm.addModule(contrib_expat(mm))
     mm.addModule(contrib_libpcap(mm))
     mm.addModule(usr_sbin_tcpdump(mm))
 

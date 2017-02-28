@@ -7,7 +7,7 @@
  */
 
 /*
- * Copyright (c) 2013-2014 embedded brains GmbH.  All rights reserved.
+ * Copyright (c) 2013, 2016 embedded brains GmbH.  All rights reserved.
  *
  *  embedded brains GmbH
  *  Dornierstr. 4
@@ -46,6 +46,8 @@
 
 __BEGIN_DECLS
 
+int rtems_bsd_command_arp(int argc, char **argv);
+
 int rtems_bsd_command_ifconfig(int argc, char **argv);
 
 int rtems_bsd_command_netstat(int argc, char **argv);
@@ -63,6 +65,10 @@ int rtems_bsd_command_dhcpcd(int argc, char **argv);
 int rtems_bsd_command_tcpdump(int argc, char **argv);
 
 int rtems_bsd_command_sysctl(int argc, char **argv);
+
+int rtems_bsd_command_vmstat(int argc, char **argv);
+
+int rtems_bsd_command_wlanstats(int argc, char **argv);
 
 __END_DECLS
 

@@ -22,7 +22,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-extern rtems_shell_cmd_t rtems_shell_BSD_Command;
+extern rtems_shell_cmd_t rtems_shell_ARP_Command;
 
 extern rtems_shell_cmd_t rtems_shell_PFCTL_Command;
 
@@ -40,6 +40,10 @@ extern rtems_shell_cmd_t rtems_shell_HOSTNAME_Command;
 extern rtems_shell_cmd_t rtems_shell_TCPDUMP_Command;
 
 extern rtems_shell_cmd_t rtems_shell_SYSCTL_Command;
+
+extern rtems_shell_cmd_t rtems_shell_VMSTAT_Command;
+
+extern rtems_shell_cmd_t rtems_shell_WLANSTATS_Command;
 
 #ifdef __cplusplus
 }

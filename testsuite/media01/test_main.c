@@ -185,9 +185,7 @@ early_initialization(void)
 
 #define CONFIGURE_FILESYSTEM_DOSFS
 
-#define CONFIGURE_SMP_APPLICATION
-
-#define CONFIGURE_SMP_MAXIMUM_PROCESSORS 32
+#define CONFIGURE_MAXIMUM_PROCESSORS 32
 
 #include <rtems/bsd/test/default-network-init.h>
 
@@ -199,13 +197,14 @@ early_initialization(void)
 
 #define CONFIGURE_SHELL_USER_COMMANDS \
   &bsp_interrupt_shell_command, \
-  &rtems_shell_BSD_Command, \
+  &rtems_shell_ARP_Command, \
   &rtems_shell_HOSTNAME_Command, \
   &rtems_shell_PING_Command, \
   &rtems_shell_ROUTE_Command, \
   &rtems_shell_NETSTAT_Command, \
   &rtems_shell_SYSCTL_Command, \
-  &rtems_shell_IFCONFIG_Command
+  &rtems_shell_IFCONFIG_Command, \
+  &rtems_shell_VMSTAT_Command
 
 #define CONFIGURE_SHELL_COMMAND_CPUUSE
 #define CONFIGURE_SHELL_COMMAND_PERIODUSE

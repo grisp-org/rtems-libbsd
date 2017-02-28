@@ -32,9 +32,6 @@
 #include <rtems/bsd/sys/cpuset.h>
 #include <sys/sysctl.h>
 
-#include <vm/vm.h>
-#include <vm/vm_page.h>
-
 #include <vm/uma.h>
 #include <vm/uma_int.h>
 
@@ -214,6 +211,7 @@ retry:
 		}
 
 		mtp->mt_size = uthp->uth_size;
+		mtp->mt_rsize = uthp->uth_rsize;
 		mtp->mt_memalloced = mtp->mt_numallocs * uthp->uth_size;
 		mtp->mt_memfreed = mtp->mt_numfrees * uthp->uth_size;
 		mtp->mt_bytes = mtp->mt_memalloced - mtp->mt_memfreed;
@@ -438,6 +436,7 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 			}
 skip_percpu:
 			mtp->mt_size = kz.uk_size;
+			mtp->mt_rsize = kz.uk_rsize;
 			mtp->mt_memalloced = mtp->mt_numallocs * mtp->mt_size;
 			mtp->mt_memfreed = mtp->mt_numfrees * mtp->mt_size;
 			mtp->mt_bytes = mtp->mt_memalloced - mtp->mt_memfreed;
@@ -449,7 +448,7 @@ skip_percpu:
 				    kz.uk_ipers;
 			mtp->mt_byteslimit = mtp->mt_countlimit * mtp->mt_size;
 			mtp->mt_count = mtp->mt_numallocs - mtp->mt_numfrees;
-			for (ubp = LIST_FIRST(&uz.uz_full_bucket); ubp !=
+			for (ubp = LIST_FIRST(&uz.uz_buckets); ubp !=
 			    NULL; ubp = LIST_NEXT(&ub, ub_link)) {
 				ret = kread(kvm, ubp, &ub, sizeof(ub), 0);
 				mtp->mt_zonefree += ub.ub_cnt;

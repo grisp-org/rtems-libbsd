@@ -113,6 +113,9 @@ static const struct mii_phydesc icsphys[] = {
 	MII_PHY_DESC(ICS, 1890),
 	MII_PHY_DESC(ICS, 1892),
 	MII_PHY_DESC(ICS, 1893),
+#ifdef __rtems__
+	MII_PHY_DESC(ICS, 1893C),
+#endif /* __rtems__ */
 	MII_PHY_END
 };
 
@@ -147,12 +150,6 @@ icsphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		mii_phy_setmedia(sc);
 		break;
 

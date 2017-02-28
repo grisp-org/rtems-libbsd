@@ -2,7 +2,7 @@
 
 /******************************************************************************
 
-  Copyright (c) 2001-2012, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -34,6 +34,14 @@
 ******************************************************************************/
 /*$FreeBSD$*/
 
+/*
+ * Uncomment the following extensions for better performance in a VM,
+ * especially if you have support in the hypervisor.
+ * See http://info.iet.unipi.it/~luigi/netmap/
+ */
+// #define BATCH_DISPATCH
+// #define NIC_SEND_COMBINING
+
 #include <rtems/bsd/local/opt_inet.h>
 #include <rtems/bsd/local/opt_inet6.h>
 
@@ -43,6 +51,7 @@
 
 #include <rtems/bsd/sys/param.h>
 #include <sys/systm.h>
+#include <sys/buf_ring.h>
 #include <sys/bus.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
@@ -62,6 +71,7 @@
 #include <net/bpf.h>
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
@@ -88,7 +98,7 @@
 /*********************************************************************
  *  Legacy Em Driver version:
  *********************************************************************/
-char lem_driver_version[] = "1.0.6";
+char lem_driver_version[] = "1.1.0";
 
 /*********************************************************************
  *  PCI Device ID Table
@@ -168,14 +178,15 @@ static int	lem_detach(device_t);
 static int	lem_shutdown(device_t);
 static int	lem_suspend(device_t);
 static int	lem_resume(device_t);
-static void	lem_start(struct ifnet *);
-static void	lem_start_locked(struct ifnet *ifp);
-static int	lem_ioctl(struct ifnet *, u_long, caddr_t);
+static void	lem_start(if_t);
+static void	lem_start_locked(if_t ifp);
+static int	lem_ioctl(if_t, u_long, caddr_t);
+static uint64_t	lem_get_counter(if_t, ift_counter);
 static void	lem_init(void *);
 static void	lem_init_locked(struct adapter *);
 static void	lem_stop(void *);
-static void	lem_media_status(struct ifnet *, struct ifmediareq *);
-static int	lem_media_change(struct ifnet *);
+static void	lem_media_status(if_t, struct ifmediareq *);
+static int	lem_media_change(if_t);
 static void	lem_identify_hardware(struct adapter *);
 static int	lem_allocate_pci_resources(struct adapter *);
 static int	lem_allocate_irq(struct adapter *adapter);
@@ -210,8 +221,8 @@ static void	lem_disable_promisc(struct adapter *);
 static void	lem_set_multi(struct adapter *);
 static void	lem_update_link_status(struct adapter *);
 static int	lem_get_buf(struct adapter *, int);
-static void	lem_register_vlan(void *, struct ifnet *, u16);
-static void	lem_unregister_vlan(void *, struct ifnet *, u16);
+static void	lem_register_vlan(void *, if_t, u16);
+static void	lem_unregister_vlan(void *, if_t, u16);
 static void	lem_setup_vlan_hw_support(struct adapter *);
 static int	lem_xmit(struct adapter *, struct mbuf **);
 static void	lem_smartspeed(struct adapter *);
@@ -276,6 +287,9 @@ extern devclass_t em_devclass;
 DRIVER_MODULE(lem, pci, lem_driver, em_devclass, 0, 0);
 MODULE_DEPEND(lem, pci, 1, 1, 1);
 MODULE_DEPEND(lem, ether, 1, 1, 1);
+#ifdef DEV_NETMAP
+MODULE_DEPEND(lem, netmap, 1, 1, 1);
+#endif /* DEV_NETMAP */
 
 /*********************************************************************
  *  Tunable default values.
@@ -291,6 +305,10 @@ static int lem_tx_int_delay_dflt = EM_TICKS_TO_USECS(EM_TIDV);
 static int lem_rx_int_delay_dflt = EM_TICKS_TO_USECS(EM_RDTR);
 static int lem_tx_abs_int_delay_dflt = EM_TICKS_TO_USECS(EM_TADV);
 static int lem_rx_abs_int_delay_dflt = EM_TICKS_TO_USECS(EM_RADV);
+/*
+ * increase lem_rxd and lem_txd to at least 2048 in netmap mode
+ * for better performance.
+ */
 static int lem_rxd = EM_DEFAULT_RXD;
 static int lem_txd = EM_DEFAULT_TXD;
 static int lem_smart_pwr_down = FALSE;
@@ -460,6 +478,16 @@ lem_attach(device_t dev)
 	    "max number of rx packets to process", &adapter->rx_process_limit,
 	    lem_rx_process_limit);
 
+#ifdef NIC_SEND_COMBINING
+	/* Sysctls to control mitigation */
+	lem_add_rx_process_limit(adapter, "sc_enable",
+	    "driver TDT mitigation", &adapter->sc_enable, 0);
+#endif /* NIC_SEND_COMBINING */
+#ifdef BATCH_DISPATCH
+	lem_add_rx_process_limit(adapter, "batch_enable",
+	    "driver rx batch", &adapter->batch_enable, 0);
+#endif /* BATCH_DISPATCH */
+
         /* Sysctl for setting the interface flow control */
 	lem_set_flow_cntrl(adapter, "flow_control",
 	    "flow control setting",
@@ -517,8 +545,16 @@ lem_attach(device_t dev)
 	 */
 	adapter->hw.mac.report_tx_early = 1;
 
-	tsize = roundup2(adapter->num_tx_desc * sizeof(struct e1000_tx_desc),
-	    EM_DBA_ALIGN);
+	/*
+	 * It seems that the descriptor DMA engine on some PCI cards
+	 * fetches memory past the end of the last descriptor in the
+	 * ring.  These reads are problematic when VT-d (DMAR) busdma
+	 * is used.  Allocate the scratch space to avoid getting
+	 * faults from DMAR, by requesting scratch memory for one more
+	 * descriptor.
+	 */
+	tsize = roundup2((adapter->num_tx_desc + 1) *
+	    sizeof(struct e1000_tx_desc), EM_DBA_ALIGN);
 
 	/* Allocate Transmit Descriptor ring */
 	if (lem_dma_malloc(adapter, tsize, &adapter->txdma, BUS_DMA_NOWAIT)) {
@@ -529,8 +565,11 @@ lem_attach(device_t dev)
 	adapter->tx_desc_base = 
 	    (struct e1000_tx_desc *)adapter->txdma.dma_vaddr;
 
-	rsize = roundup2(adapter->num_rx_desc * sizeof(struct e1000_rx_desc),
-	    EM_DBA_ALIGN);
+	/*
+	 * See comment above txdma allocation for rationale behind +1.
+	 */
+	rsize = roundup2((adapter->num_rx_desc + 1) *
+	    sizeof(struct e1000_rx_desc), EM_DBA_ALIGN);
 
 	/* Allocate Receive Descriptor ring */
 	if (lem_dma_malloc(adapter, rsize, &adapter->rxdma, BUS_DMA_NOWAIT)) {
@@ -654,7 +693,7 @@ lem_attach(device_t dev)
 		lem_get_hw_control(adapter);
 
 	/* Tell the stack that the interface is not active */
-	adapter->ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
+	if_setdrvflagbits(adapter->ifp, 0, IFF_DRV_OACTIVE | IFF_DRV_RUNNING);
 
 	adapter->led_dev = led_create(lem_led_func, adapter,
 	    device_get_nameunit(dev));
@@ -676,7 +715,7 @@ err_rx_desc:
 	lem_dma_free(adapter, &adapter->txdma);
 err_tx_desc:
 err_pci:
-	if (adapter->ifp != NULL)
+	if (adapter->ifp != (void *)NULL)
 		if_free(adapter->ifp);
 	lem_free_pci_resources(adapter);
 	free(adapter->mta, M_DEVBUF);
@@ -701,18 +740,18 @@ static int
 lem_detach(device_t dev)
 {
 	struct adapter	*adapter = device_get_softc(dev);
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	INIT_DEBUGOUT("em_detach: begin");
 
 	/* Make sure VLANS are not using driver */
-	if (adapter->ifp->if_vlantrunk != NULL) {
+	if (if_vlantrunkinuse(ifp)) {
 		device_printf(dev,"Vlan in use, detach first\n");
 		return (EBUSY);
 	}
 
 #ifdef DEVICE_POLLING
-	if (ifp->if_capenable & IFCAP_POLLING)
+	if (if_getcapenable(ifp) & IFCAP_POLLING)
 		ether_poll_deregister(ifp);
 #endif
 
@@ -806,7 +845,7 @@ static int
 lem_resume(device_t dev)
 {
 	struct adapter *adapter = device_get_softc(dev);
-	struct ifnet *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	EM_CORE_LOCK(adapter);
 	lem_init_locked(adapter);
@@ -819,14 +858,14 @@ lem_resume(device_t dev)
 
 
 static void
-lem_start_locked(struct ifnet *ifp)
+lem_start_locked(if_t ifp)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	struct mbuf	*m_head;
 
 	EM_TX_LOCK_ASSERT(adapter);
 
-	if ((ifp->if_drv_flags & (IFF_DRV_RUNNING|IFF_DRV_OACTIVE)) !=
+	if ((if_getdrvflags(ifp) & (IFF_DRV_RUNNING|IFF_DRV_OACTIVE)) !=
 	    IFF_DRV_RUNNING)
 		return;
 	if (!adapter->link_active)
@@ -845,9 +884,9 @@ lem_start_locked(struct ifnet *ifp)
 		}
 	}
 
-	while (!IFQ_DRV_IS_EMPTY(&ifp->if_snd)) {
+	while (!if_sendq_empty(ifp)) {
+		m_head = if_dequeue(ifp);
 
-                IFQ_DRV_DEQUEUE(&ifp->if_snd, m_head);
 		if (m_head == NULL)
 			break;
 		/*
@@ -857,31 +896,31 @@ lem_start_locked(struct ifnet *ifp)
 		if (lem_xmit(adapter, &m_head)) {
 			if (m_head == NULL)
 				break;
-			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-			IFQ_DRV_PREPEND(&ifp->if_snd, m_head);
+			if_setdrvflagbits(ifp, IFF_DRV_OACTIVE, 0);
+			if_sendq_prepend(ifp, m_head);
 			break;
 		}
 
 		/* Send a copy of the frame to the BPF listener */
-		ETHER_BPF_MTAP(ifp, m_head);
+		if_etherbpfmtap(ifp, m_head);
 
 		/* Set timeout in case hardware has problems transmitting. */
 		adapter->watchdog_check = TRUE;
 		adapter->watchdog_time = ticks;
 	}
 	if (adapter->num_tx_desc_avail <= EM_TX_OP_THRESHOLD)
-		ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+		if_setdrvflagbits(ifp, IFF_DRV_OACTIVE, 0);
 
 	return;
 }
 
 static void
-lem_start(struct ifnet *ifp)
+lem_start(if_t ifp)
 {
-	struct adapter *adapter = ifp->if_softc;
+	struct adapter *adapter = if_getsoftc(ifp);
 
 	EM_TX_LOCK(adapter);
-	if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+	if (if_getdrvflags(ifp) & IFF_DRV_RUNNING)
 		lem_start_locked(ifp);
 	EM_TX_UNLOCK(adapter);
 }
@@ -896,9 +935,9 @@ lem_start(struct ifnet *ifp)
  **********************************************************************/
 
 static int
-lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
+lem_ioctl(if_t ifp, u_long command, caddr_t data)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	struct ifreq	*ifr = (struct ifreq *)data;
 #if defined(INET) || defined(INET6)
 	struct ifaddr	*ifa = (struct ifaddr *)data;
@@ -924,11 +963,11 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		** so we avoid doing it when possible.
 		*/
 		if (avoid_reset) {
-			ifp->if_flags |= IFF_UP;
-			if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
+			if_setflagbits(ifp, IFF_UP, 0);
+			if (!(if_getdrvflags(ifp) & IFF_DRV_RUNNING))
 				lem_init(adapter);
 #ifdef INET
-			if (!(ifp->if_flags & IFF_NOARP))
+			if (!(if_getflags(ifp) & IFF_NOARP))
 				arp_ifinit(ifp, ifa);
 #endif
 		} else
@@ -955,10 +994,11 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			break;
 		}
 
-		ifp->if_mtu = ifr->ifr_mtu;
+		if_setmtu(ifp, ifr->ifr_mtu);
 		adapter->max_frame_size =
-		    ifp->if_mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
-		lem_init_locked(adapter);
+		    if_getmtu(ifp) + ETHER_HDR_LEN + ETHER_CRC_LEN;
+		if (if_getdrvflags(ifp) & IFF_DRV_RUNNING)
+			lem_init_locked(adapter);
 		EM_CORE_UNLOCK(adapter);
 		break;
 	    }
@@ -966,9 +1006,9 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		IOCTL_DEBUGOUT("ioctl rcv'd:\
 		    SIOCSIFFLAGS (Set Interface Flags)");
 		EM_CORE_LOCK(adapter);
-		if (ifp->if_flags & IFF_UP) {
-			if ((ifp->if_drv_flags & IFF_DRV_RUNNING)) {
-				if ((ifp->if_flags ^ adapter->if_flags) &
+		if (if_getflags(ifp) & IFF_UP) {
+			if ((if_getdrvflags(ifp) & IFF_DRV_RUNNING)) {
+				if ((if_getflags(ifp) ^ adapter->if_flags) &
 				    (IFF_PROMISC | IFF_ALLMULTI)) {
 					lem_disable_promisc(adapter);
 					lem_set_promisc(adapter);
@@ -976,18 +1016,18 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			} else
 				lem_init_locked(adapter);
 		} else
-			if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+			if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 				EM_TX_LOCK(adapter);
 				lem_stop(adapter);
 				EM_TX_UNLOCK(adapter);
 			}
-		adapter->if_flags = ifp->if_flags;
+		adapter->if_flags = if_getflags(ifp);
 		EM_CORE_UNLOCK(adapter);
 		break;
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		IOCTL_DEBUGOUT("ioctl rcv'd: SIOC(ADD|DEL)MULTI");
-		if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+		if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 			EM_CORE_LOCK(adapter);
 			lem_disable_intr(adapter);
 			lem_set_multi(adapter);
@@ -996,7 +1036,7 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 				lem_initialize_receive_unit(adapter);
 			}
 #ifdef DEVICE_POLLING
-			if (!(ifp->if_capenable & IFCAP_POLLING))
+			if (!(if_getcapenable(ifp) & IFCAP_POLLING))
 #endif
 				lem_enable_intr(adapter);
 			EM_CORE_UNLOCK(adapter);
@@ -1023,7 +1063,7 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 		IOCTL_DEBUGOUT("ioctl rcv'd: SIOCSIFCAP (Set Capabilities)");
 		reinit = 0;
-		mask = ifr->ifr_reqcap ^ ifp->if_capenable;
+		mask = ifr->ifr_reqcap ^ if_getcapenable(ifp);
 #ifdef DEVICE_POLLING
 		if (mask & IFCAP_POLLING) {
 			if (ifr->ifr_reqcap & IFCAP_POLLING) {
@@ -1032,36 +1072,36 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 					return (error);
 				EM_CORE_LOCK(adapter);
 				lem_disable_intr(adapter);
-				ifp->if_capenable |= IFCAP_POLLING;
+				if_setcapenablebit(ifp, IFCAP_POLLING, 0);
 				EM_CORE_UNLOCK(adapter);
 			} else {
 				error = ether_poll_deregister(ifp);
 				/* Enable interrupt even in error case */
 				EM_CORE_LOCK(adapter);
 				lem_enable_intr(adapter);
-				ifp->if_capenable &= ~IFCAP_POLLING;
+				if_setcapenablebit(ifp, 0, IFCAP_POLLING);
 				EM_CORE_UNLOCK(adapter);
 			}
 		}
 #endif
 		if (mask & IFCAP_HWCSUM) {
-			ifp->if_capenable ^= IFCAP_HWCSUM;
+			if_togglecapenable(ifp, IFCAP_HWCSUM);
 			reinit = 1;
 		}
 		if (mask & IFCAP_VLAN_HWTAGGING) {
-			ifp->if_capenable ^= IFCAP_VLAN_HWTAGGING;
+			if_togglecapenable(ifp, IFCAP_VLAN_HWTAGGING);
 			reinit = 1;
 		}
 		if ((mask & IFCAP_WOL) &&
-		    (ifp->if_capabilities & IFCAP_WOL) != 0) {
+		    (if_getcapabilities(ifp) & IFCAP_WOL) != 0) {
 			if (mask & IFCAP_WOL_MCAST)
-				ifp->if_capenable ^= IFCAP_WOL_MCAST;
+				if_togglecapenable(ifp, IFCAP_WOL_MCAST);
 			if (mask & IFCAP_WOL_MAGIC)
-				ifp->if_capenable ^= IFCAP_WOL_MAGIC;
+				if_togglecapenable(ifp, IFCAP_WOL_MAGIC);
 		}
-		if (reinit && (ifp->if_drv_flags & IFF_DRV_RUNNING))
+		if (reinit && (if_getdrvflags(ifp) & IFF_DRV_RUNNING))
 			lem_init(adapter);
-		VLAN_CAPABILITIES(ifp);
+		if_vlancap(ifp);
 		break;
 	    }
 
@@ -1088,7 +1128,7 @@ lem_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 static void
 lem_init_locked(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	device_t	dev = adapter->dev;
 	u32		pba;
 
@@ -1135,7 +1175,7 @@ lem_init_locked(struct adapter *adapter)
 	E1000_WRITE_REG(&adapter->hw, E1000_PBA, pba);
 	
 	/* Get the latest mac address, User can use a LAA */
-        bcopy(IF_LLADDR(adapter->ifp), adapter->hw.mac.addr,
+        bcopy(if_getlladdr(adapter->ifp), adapter->hw.mac.addr,
               ETHER_ADDR_LEN);
 
 	/* Put the address into the Receive Address Array */
@@ -1152,10 +1192,10 @@ lem_init_locked(struct adapter *adapter)
 	E1000_WRITE_REG(&adapter->hw, E1000_VET, ETHERTYPE_VLAN);
 
 	/* Set hardware offload abilities */
-	ifp->if_hwassist = 0;
+	if_clearhwassist(ifp);
 	if (adapter->hw.mac.type >= e1000_82543) {
-		if (ifp->if_capenable & IFCAP_TXCSUM)
-			ifp->if_hwassist |= (CSUM_TCP | CSUM_UDP);
+		if (if_getcapenable(ifp) & IFCAP_TXCSUM)
+			if_sethwassistbits(ifp, CSUM_TCP | CSUM_UDP, 0);
 	}
 
 	/* Configure for OS presence */
@@ -1179,8 +1219,8 @@ lem_init_locked(struct adapter *adapter)
 	lem_initialize_receive_unit(adapter);
 
 	/* Use real VLAN Filter support? */
-	if (ifp->if_capenable & IFCAP_VLAN_HWTAGGING) {
-		if (ifp->if_capenable & IFCAP_VLAN_HWFILTER)
+	if (if_getcapenable(ifp) & IFCAP_VLAN_HWTAGGING) {
+		if (if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER)
 			/* Use real VLAN Filter support */
 			lem_setup_vlan_hw_support(adapter);
 		else {
@@ -1194,8 +1234,7 @@ lem_init_locked(struct adapter *adapter)
 	/* Don't lose promiscuous settings */
 	lem_set_promisc(adapter);
 
-	ifp->if_drv_flags |= IFF_DRV_RUNNING;
-	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+	if_setdrvflagbits(ifp, IFF_DRV_RUNNING, IFF_DRV_OACTIVE);
 
 	callout_reset(&adapter->timer, hz, lem_local_timer, adapter);
 	e1000_clear_hw_cntrs_base_generic(&adapter->hw);
@@ -1205,7 +1244,7 @@ lem_init_locked(struct adapter *adapter)
 	 * Only enable interrupts if we are not polling, make sure
 	 * they are off otherwise.
 	 */
-	if (ifp->if_capenable & IFCAP_POLLING)
+	if (if_getcapenable(ifp) & IFCAP_POLLING)
 		lem_disable_intr(adapter);
 	else
 #endif /* DEVICE_POLLING */
@@ -1234,13 +1273,13 @@ lem_init(void *arg)
  *
  *********************************************************************/
 static int
-lem_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
+lem_poll(if_t ifp, enum poll_cmd cmd, int count)
 {
-	struct adapter *adapter = ifp->if_softc;
+	struct adapter *adapter = if_getsoftc(ifp);
 	u32		reg_icr, rx_done = 0;
 
 	EM_CORE_LOCK(adapter);
-	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
+	if ((if_getdrvflags(ifp) & IFF_DRV_RUNNING) == 0) {
 		EM_CORE_UNLOCK(adapter);
 		return (rx_done);
 	}
@@ -1261,7 +1300,7 @@ lem_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 
 	EM_TX_LOCK(adapter);
 	lem_txeof(adapter);
-	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+	if(!if_sendq_empty(ifp))
 		lem_start_locked(ifp);
 	EM_TX_UNLOCK(adapter);
 	return (rx_done);
@@ -1277,12 +1316,12 @@ static void
 lem_intr(void *arg)
 {
 	struct adapter	*adapter = arg;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	u32		reg_icr;
 
 
-	if ((ifp->if_capenable & IFCAP_POLLING) ||
-	    ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0))
+	if ((if_getcapenable(ifp) & IFCAP_POLLING) ||
+	    ((if_getdrvflags(ifp) & IFF_DRV_RUNNING) == 0))
 		return;
 
 	EM_CORE_LOCK(adapter);
@@ -1312,8 +1351,8 @@ lem_intr(void *arg)
 
 	EM_TX_LOCK(adapter);
 	lem_txeof(adapter);
-	if (ifp->if_drv_flags & IFF_DRV_RUNNING &&
-	    !IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+	if ((if_getdrvflags(ifp) & IFF_DRV_RUNNING) &&
+	    (!if_sendq_empty(ifp)))
 		lem_start_locked(ifp);
 	EM_TX_UNLOCK(adapter);
 	return;
@@ -1324,9 +1363,9 @@ static void
 lem_handle_link(void *context, int pending)
 {
 	struct adapter	*adapter = context;
-	struct ifnet *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
-	if (!(ifp->if_drv_flags & IFF_DRV_RUNNING))
+	if (!(if_getdrvflags(ifp) & IFF_DRV_RUNNING))
 		return;
 
 	EM_CORE_LOCK(adapter);
@@ -1344,14 +1383,14 @@ static void
 lem_handle_rxtx(void *context, int pending)
 {
 	struct adapter	*adapter = context;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 
-	if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
+	if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 		bool more = lem_rxeof(adapter, adapter->rx_process_limit, NULL);
 		EM_TX_LOCK(adapter);
 		lem_txeof(adapter);
-		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+		if(!if_sendq_empty(ifp))
 			lem_start_locked(ifp);
 		EM_TX_UNLOCK(adapter);
 		if (more) {
@@ -1360,7 +1399,7 @@ lem_handle_rxtx(void *context, int pending)
 		}
 	}
 
-	if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+	if (if_getdrvflags(ifp) & IFF_DRV_RUNNING)
 		lem_enable_intr(adapter);
 }
 
@@ -1373,7 +1412,7 @@ static int
 lem_irq_fast(void *arg)
 {
 	struct adapter	*adapter = arg;
-	struct ifnet	*ifp;
+	if_t ifp;
 	u32		reg_icr;
 
 	ifp = adapter->ifp;
@@ -1417,9 +1456,9 @@ lem_irq_fast(void *arg)
  *
  **********************************************************************/
 static void
-lem_media_status(struct ifnet *ifp, struct ifmediareq *ifmr)
+lem_media_status(if_t ifp, struct ifmediareq *ifmr)
 {
-	struct adapter *adapter = ifp->if_softc;
+	struct adapter *adapter = if_getsoftc(ifp);
 	u_char fiber_type = IFM_1000_SX;
 
 	INIT_DEBUGOUT("lem_media_status: begin");
@@ -1471,9 +1510,9 @@ lem_media_status(struct ifnet *ifp, struct ifmediareq *ifmr)
  *
  **********************************************************************/
 static int
-lem_media_change(struct ifnet *ifp)
+lem_media_change(if_t ifp)
 {
-	struct adapter *adapter = ifp->if_softc;
+	struct adapter *adapter = if_getsoftc(ifp);
 	struct ifmedia  *ifm = &adapter->media;
 
 	INIT_DEBUGOUT("lem_media_change: begin");
@@ -1581,9 +1620,9 @@ lem_xmit(struct adapter *adapter, struct mbuf **m_headp)
 	if (error == EFBIG) {
 		struct mbuf *m;
 
-		m = m_defrag(*m_headp, M_NOWAIT);
+		m = m_collapse(*m_headp, M_NOWAIT, EM_MAX_SCATTER);
 		if (m == NULL) {
-			adapter->mbuf_alloc_failed++;
+			adapter->mbuf_defrag_failed++;
 			m_freem(*m_headp);
 			*m_headp = NULL;
 			return (ENOBUFS);
@@ -1605,7 +1644,7 @@ lem_xmit(struct adapter *adapter, struct mbuf **m_headp)
 		return (error);
 	}
 
-        if (nsegs > (adapter->num_tx_desc_avail - 2)) {
+        if (adapter->num_tx_desc_avail < (nsegs + 2)) {
                 adapter->no_tx_desc_avail2++;
 		bus_dmamap_unload(adapter->txtag, map);
 		return (ENOBUFS);
@@ -1717,6 +1756,19 @@ lem_xmit(struct adapter *adapter, struct mbuf **m_headp)
 	 */
 	bus_dmamap_sync(adapter->txdma.dma_tag, adapter->txdma.dma_map,
 	    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
+
+#ifdef NIC_SEND_COMBINING
+	if (adapter->sc_enable) {
+		if (adapter->shadow_tdt & MIT_PENDING_INT) {
+			/* signal intr and data pending */
+			adapter->shadow_tdt = MIT_PENDING_TDT | (i & 0xffff);
+			return (0);
+		} else {
+			adapter->shadow_tdt = MIT_PENDING_INT;
+		}
+	}
+#endif /* NIC_SEND_COMBINING */
+
 	if (adapter->hw.mac.type == e1000_82547 &&
 	    adapter->link_duplex == HALF_DUPLEX)
 		lem_82547_move_tail(adapter);
@@ -1850,18 +1902,18 @@ lem_82547_tx_fifo_reset(struct adapter *adapter)
 static void
 lem_set_promisc(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	u32		reg_rctl;
 
 	reg_rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
 
-	if (ifp->if_flags & IFF_PROMISC) {
+	if (if_getflags(ifp) & IFF_PROMISC) {
 		reg_rctl |= (E1000_RCTL_UPE | E1000_RCTL_MPE);
 		/* Turn this on if you want to see bad packets */
 		if (lem_debug_sbp)
 			reg_rctl |= E1000_RCTL_SBP;
 		E1000_WRITE_REG(&adapter->hw, E1000_RCTL, reg_rctl);
-	} else if (ifp->if_flags & IFF_ALLMULTI) {
+	} else if (if_getflags(ifp) & IFF_ALLMULTI) {
 		reg_rctl |= E1000_RCTL_MPE;
 		reg_rctl &= ~E1000_RCTL_UPE;
 		E1000_WRITE_REG(&adapter->hw, E1000_RCTL, reg_rctl);
@@ -1871,34 +1923,17 @@ lem_set_promisc(struct adapter *adapter)
 static void
 lem_disable_promisc(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	u32		reg_rctl;
 	int		mcnt = 0;
 
 	reg_rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
 	reg_rctl &=  (~E1000_RCTL_UPE);
-	if (ifp->if_flags & IFF_ALLMULTI)
+	if (if_getflags(ifp) & IFF_ALLMULTI)
 		mcnt = MAX_NUM_MULTICAST_ADDRESSES;
-	else {
-		struct  ifmultiaddr *ifma;
-#if __FreeBSD_version < 800000
-		IF_ADDR_LOCK(ifp);
-#else   
-		if_maddr_rlock(ifp);
-#endif
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			if (mcnt == MAX_NUM_MULTICAST_ADDRESSES)
-				break;
-			mcnt++;
-		}
-#if __FreeBSD_version < 800000
-		IF_ADDR_UNLOCK(ifp);
-#else
-		if_maddr_runlock(ifp);
-#endif
-	}
+	else
+		mcnt = if_multiaddr_count(ifp, MAX_NUM_MULTICAST_ADDRESSES);
+
 	/* Don't disable if in MAX groups */
 	if (mcnt < MAX_NUM_MULTICAST_ADDRESSES)
 		reg_rctl &=  (~E1000_RCTL_MPE);
@@ -1917,8 +1952,7 @@ lem_disable_promisc(struct adapter *adapter)
 static void
 lem_set_multi(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
-	struct ifmultiaddr *ifma;
+	if_t ifp = adapter->ifp;
 	u32 reg_rctl = 0;
 	u8  *mta; /* Multicast array memory */
 	int mcnt = 0;
@@ -1938,27 +1972,8 @@ lem_set_multi(struct adapter *adapter)
 		msec_delay(5);
 	}
 
-#if __FreeBSD_version < 800000
-	IF_ADDR_LOCK(ifp);
-#else
-	if_maddr_rlock(ifp);
-#endif
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
+	if_multiaddr_array(ifp, mta, &mcnt, MAX_NUM_MULTICAST_ADDRESSES);
 
-		if (mcnt == MAX_NUM_MULTICAST_ADDRESSES)
-			break;
-
-		bcopy(LLADDR((struct sockaddr_dl *)ifma->ifma_addr),
-		    &mta[mcnt * ETH_ADDR_LEN], ETH_ADDR_LEN);
-		mcnt++;
-	}
-#if __FreeBSD_version < 800000
-	IF_ADDR_UNLOCK(ifp);
-#else
-	if_maddr_runlock(ifp);
-#endif
 	if (mcnt >= MAX_NUM_MULTICAST_ADDRESSES) {
 		reg_rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
 		reg_rctl |= E1000_RCTL_MPE;
@@ -2010,7 +2025,7 @@ lem_local_timer(void *arg)
 	return;
 hung:
 	device_printf(adapter->dev, "Watchdog timeout -- resetting\n");
-	adapter->ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+	if_setdrvflagbits(adapter->ifp, 0, IFF_DRV_RUNNING);
 	adapter->watchdog_events++;
 	lem_init_locked(adapter);
 }
@@ -2019,7 +2034,7 @@ static void
 lem_update_link_status(struct adapter *adapter)
 {
 	struct e1000_hw *hw = &adapter->hw;
-	struct ifnet *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	device_t dev = adapter->dev;
 	u32 link_check = 0;
 
@@ -2060,10 +2075,11 @@ lem_update_link_status(struct adapter *adapter)
 			    "Full Duplex" : "Half Duplex"));
 		adapter->link_active = 1;
 		adapter->smartspeed = 0;
-		ifp->if_baudrate = adapter->link_speed * 1000000;
+		if_setbaudrate(ifp, adapter->link_speed * 1000000);
 		if_link_state_change(ifp, LINK_STATE_UP);
 	} else if (!link_check && (adapter->link_active == 1)) {
-		ifp->if_baudrate = adapter->link_speed = 0;
+		if_setbaudrate(ifp, 0);
+		adapter->link_speed = 0;
 		adapter->link_duplex = 0;
 		if (bootverbose)
 			device_printf(dev, "Link is Down\n");
@@ -2087,7 +2103,7 @@ static void
 lem_stop(void *arg)
 {
 	struct adapter	*adapter = arg;
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	EM_CORE_LOCK_ASSERT(adapter);
 	EM_TX_LOCK_ASSERT(adapter);
@@ -2099,7 +2115,7 @@ lem_stop(void *arg)
 	callout_stop(&adapter->tx_fifo_timer);
 
 	/* Tell the stack that the interface is no longer active */
-	ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
+	if_setdrvflagbits(ifp, 0, (IFF_DRV_RUNNING | IFF_DRV_OACTIVE));
 
 	e1000_reset_hw(&adapter->hw);
 	if (adapter->hw.mac.type >= e1000_82544)
@@ -2309,7 +2325,7 @@ lem_hardware_init(struct adapter *adapter)
 	 *   received after sending an XOFF.
 	 * - Low water mark works best when it is very near the high water mark.
 	 *   This allows the receiver to restart by sending XON when it has
-	 *   drained a bit. Here we use an arbitary value of 1500 which will
+	 *   drained a bit. Here we use an arbitrary value of 1500 which will
 	 *   restart after one full frame is pulled from the buffer. There
 	 *   could be several smaller frames in the buffer and if so they will
 	 *   not trigger the XON until their total number reduces the buffer
@@ -2350,40 +2366,40 @@ lem_hardware_init(struct adapter *adapter)
 static int
 lem_setup_interface(device_t dev, struct adapter *adapter)
 {
-	struct ifnet   *ifp;
+	if_t ifp;
 
 	INIT_DEBUGOUT("lem_setup_interface: begin");
 
-	ifp = adapter->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
+	ifp = adapter->ifp = if_gethandle(IFT_ETHER);
+	if (ifp == (void *)NULL) {
 		device_printf(dev, "can not allocate ifnet structure\n");
 		return (-1);
 	}
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_init =  lem_init;
-	ifp->if_softc = adapter;
-	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
-	ifp->if_ioctl = lem_ioctl;
-	ifp->if_start = lem_start;
-	IFQ_SET_MAXLEN(&ifp->if_snd, adapter->num_tx_desc - 1);
-	ifp->if_snd.ifq_drv_maxlen = adapter->num_tx_desc - 1;
-	IFQ_SET_READY(&ifp->if_snd);
+	if_setinitfn(ifp,  lem_init);
+	if_setsoftc(ifp, adapter);
+	if_setflags(ifp, IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST);
+	if_setioctlfn(ifp, lem_ioctl);
+	if_setstartfn(ifp, lem_start);
+	if_setgetcounterfn(ifp, lem_get_counter);
+	if_setsendqlen(ifp, adapter->num_tx_desc - 1);
+	if_setsendqready(ifp);
 
 	ether_ifattach(ifp, adapter->hw.mac.addr);
 
-	ifp->if_capabilities = ifp->if_capenable = 0;
+	if_setcapabilities(ifp, 0);
 
 	if (adapter->hw.mac.type >= e1000_82543) {
-		ifp->if_capabilities |= IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM;
-		ifp->if_capenable |= IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM;
+		if_setcapabilitiesbit(ifp, IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM, 0);
+		if_setcapenablebit(ifp, IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM, 0);
 	}
 
 	/*
 	 * Tell the upper layer(s) we support long frames.
 	 */
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
-	ifp->if_capabilities |= IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU;
-	ifp->if_capenable |= IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU;
+	if_setifheaderlen(ifp, sizeof(struct ether_vlan_header));
+	if_setcapabilitiesbit(ifp, IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU, 0);
+	if_setcapenablebit(ifp, IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU, 0);
 
 	/*
 	** Dont turn this on by default, if vlans are
@@ -2393,16 +2409,16 @@ lem_setup_interface(device_t dev, struct adapter *adapter)
 	** using vlans directly on the em driver you can
 	** enable this and get full hardware tag filtering.
 	*/
-	ifp->if_capabilities |= IFCAP_VLAN_HWFILTER;
+	if_setcapabilitiesbit(ifp, IFCAP_VLAN_HWFILTER, 0);
 
 #ifdef DEVICE_POLLING
-	ifp->if_capabilities |= IFCAP_POLLING;
+	if_setcapabilitiesbit(ifp, IFCAP_POLLING, 0);
 #endif
 
 	/* Enable only WOL MAGIC by default */
 	if (adapter->wol) {
-		ifp->if_capabilities |= IFCAP_WOL;
-		ifp->if_capenable |= IFCAP_WOL_MAGIC;
+		if_setcapabilitiesbit(ifp, IFCAP_WOL, 0);
+		if_setcapenablebit(ifp, IFCAP_WOL_MAGIC, 0);
 	}
 		
 	/*
@@ -2565,7 +2581,6 @@ fail_2:
 	bus_dmamem_free(dma->dma_tag, dma->dma_vaddr, dma->dma_map);
 	bus_dma_tag_destroy(dma->dma_tag);
 fail_0:
-	dma->dma_map = NULL;
 	dma->dma_tag = NULL;
 
 	return (error);
@@ -2576,12 +2591,15 @@ lem_dma_free(struct adapter *adapter, struct em_dma_alloc *dma)
 {
 	if (dma->dma_tag == NULL)
 		return;
-	if (dma->dma_map != NULL) {
+	if (dma->dma_paddr != 0) {
 		bus_dmamap_sync(dma->dma_tag, dma->dma_map,
 		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(dma->dma_tag, dma->dma_map);
+		dma->dma_paddr = 0;
+	}
+	if (dma->dma_vaddr != NULL) {
 		bus_dmamem_free(dma->dma_tag, dma->dma_vaddr, dma->dma_map);
-		dma->dma_map = NULL;
+		dma->dma_vaddr = NULL;
 	}
 	bus_dma_tag_destroy(dma->dma_tag);
 	dma->dma_tag = NULL;
@@ -2656,7 +2674,7 @@ lem_setup_transmit_structures(struct adapter *adapter)
 	struct em_buffer *tx_buffer;
 #ifdef DEV_NETMAP
 	/* we are already locked */
-	struct netmap_adapter *na = NA(adapter->ifp);
+	struct netmap_adapter *na = netmap_getna(adapter->ifp);
 	struct netmap_slot *slot = netmap_reset(na, NR_TX, 0, 0);
 #endif /* DEV_NETMAP */
 
@@ -2679,10 +2697,10 @@ lem_setup_transmit_structures(struct adapter *adapter)
 			uint64_t paddr;
 			void *addr;
 
-			addr = PNMB(slot + si, &paddr);
+			addr = PNMB(na, slot + si, &paddr);
 			adapter->tx_desc_base[i].buffer_addr = htole64(paddr);
 			/* reload the map for netmap mode */
-			netmap_load_map(adapter->txtag, tx_buffer->map, addr);
+			netmap_load_map(na, adapter->txtag, tx_buffer->map, addr);
 		}
 #endif /* DEV_NETMAP */
 		tx_buffer->next_eop = -1;
@@ -2808,10 +2826,6 @@ lem_free_transmit_structures(struct adapter *adapter)
 		bus_dma_tag_destroy(adapter->txtag);
 		adapter->txtag = NULL;
 	}
-#if __FreeBSD_version >= 800000
-	if (adapter->br != NULL)
-        	buf_ring_free(adapter->br, M_DEVBUF);
-#endif
 }
 
 /*********************************************************************
@@ -2982,7 +2996,7 @@ lem_txeof(struct adapter *adapter)
         int first, last, done, num_avail;
         struct em_buffer *tx_buffer;
         struct e1000_tx_desc   *tx_desc, *eop_desc;
-	struct ifnet   *ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 
 	EM_TX_LOCK_ASSERT(adapter);
 
@@ -3022,7 +3036,7 @@ lem_txeof(struct adapter *adapter)
                 	++num_avail;
 
 			if (tx_buffer->m_head) {
-				ifp->if_opackets++;
+				if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 				bus_dmamap_sync(adapter->txtag,
 				    tx_buffer->map,
 				    BUS_DMASYNC_POSTWRITE);
@@ -3057,13 +3071,23 @@ lem_txeof(struct adapter *adapter)
         adapter->next_tx_to_clean = first;
         adapter->num_tx_desc_avail = num_avail;
 
+#ifdef NIC_SEND_COMBINING
+	if ((adapter->shadow_tdt & MIT_PENDING_TDT) == MIT_PENDING_TDT) {
+		/* a tdt write is pending, do it */
+		E1000_WRITE_REG(&adapter->hw, E1000_TDT(0),
+			0xffff & adapter->shadow_tdt);
+		adapter->shadow_tdt = MIT_PENDING_INT;
+	} else {
+		adapter->shadow_tdt = 0; // disable
+	}
+#endif /* NIC_SEND_COMBINING */
         /*
          * If we have enough room, clear IFF_DRV_OACTIVE to
          * tell the stack that it is OK to send packets.
          * If there are no pending descriptors, clear the watchdog.
          */
         if (adapter->num_tx_desc_avail > EM_TX_CLEANUP_THRESHOLD) {                
-                ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+                if_setdrvflagbits(ifp, 0, IFF_DRV_OACTIVE);
                 if (adapter->num_tx_desc_avail == adapter->num_tx_desc) {
 			adapter->watchdog_check = FALSE;
 			return;
@@ -3184,8 +3208,7 @@ lem_allocate_receive_structures(struct adapter *adapter)
 	}
 
 	/* Create the spare map (used by getbuf) */
-	error = bus_dmamap_create(adapter->rxtag, BUS_DMA_NOWAIT,
-	     &adapter->rx_sparemap);
+	error = bus_dmamap_create(adapter->rxtag, 0, &adapter->rx_sparemap);
 	if (error) {
 		device_printf(dev, "%s: bus_dmamap_create failed: %d\n",
 		    __func__, error);
@@ -3194,8 +3217,7 @@ lem_allocate_receive_structures(struct adapter *adapter)
 
 	rx_buffer = adapter->rx_buffer_area;
 	for (i = 0; i < adapter->num_rx_desc; i++, rx_buffer++) {
-		error = bus_dmamap_create(adapter->rxtag, BUS_DMA_NOWAIT,
-		    &rx_buffer->map);
+		error = bus_dmamap_create(adapter->rxtag, 0, &rx_buffer->map);
 		if (error) {
 			device_printf(dev, "%s: bus_dmamap_create failed: %d\n",
 			    __func__, error);
@@ -3222,7 +3244,7 @@ lem_setup_receive_structures(struct adapter *adapter)
 	int i, error;
 #ifdef DEV_NETMAP
 	/* we are already under lock */
-	struct netmap_adapter *na = NA(adapter->ifp);
+	struct netmap_adapter *na = netmap_getna(adapter->ifp);
 	struct netmap_slot *slot = netmap_reset(na, NR_RX, 0, 0);
 #endif
 
@@ -3251,8 +3273,8 @@ lem_setup_receive_structures(struct adapter *adapter)
 			uint64_t paddr;
 			void *addr;
 
-			addr = PNMB(slot + si, &paddr);
-			netmap_load_map(adapter->rxtag, rx_buffer->map, addr);
+			addr = PNMB(na, slot + si, &paddr);
+			netmap_load_map(na, adapter->rxtag, rx_buffer->map, addr);
 			/* Update descriptor */
 			adapter->rx_desc_base[i].buffer_addr = htole64(paddr);
 			continue;
@@ -3280,7 +3302,7 @@ lem_setup_receive_structures(struct adapter *adapter)
 static void
 lem_initialize_receive_unit(struct adapter *adapter)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	u64	bus_addr;
 	u32	rctl, rxcsum;
 
@@ -3345,14 +3367,14 @@ lem_initialize_receive_unit(struct adapter *adapter)
 		break;
 	}
 
-	if (ifp->if_mtu > ETHERMTU)
+	if (if_getmtu(ifp) > ETHERMTU)
 		rctl |= E1000_RCTL_LPE;
 	else
 		rctl &= ~E1000_RCTL_LPE;
 
 	/* Enable 82543 Receive Checksum Offload for TCP and UDP */
 	if ((adapter->hw.mac.type >= e1000_82543) &&
-	    (ifp->if_capenable & IFCAP_RXCSUM)) {
+	    (if_getcapenable(ifp) & IFCAP_RXCSUM)) {
 		rxcsum = E1000_READ_REG(&adapter->hw, E1000_RXCSUM);
 		rxcsum |= (E1000_RXCSUM_IPOFL | E1000_RXCSUM_TUOFL);
 		E1000_WRITE_REG(&adapter->hw, E1000_RXCSUM, rxcsum);
@@ -3369,8 +3391,10 @@ lem_initialize_receive_unit(struct adapter *adapter)
 	rctl = adapter->num_rx_desc - 1; /* default RDT value */
 #ifdef DEV_NETMAP
 	/* preserve buffers already made available to clients */
-	if (ifp->if_capenable & IFCAP_NETMAP)
-		rctl -= nm_kr_rxspace(&NA(adapter->ifp)->rx_rings[0]);
+	if (if_getcapenable(ifp) & IFCAP_NETMAP) {
+		struct netmap_adapter *na = netmap_getna(adapter->ifp);
+		rctl -= nm_kr_rxspace(&na->rx_rings[0]);
+	}
 #endif /* DEV_NETMAP */
 	E1000_WRITE_REG(&adapter->hw, E1000_RDT(0), rctl);
 
@@ -3442,14 +3466,21 @@ lem_free_receive_structures(struct adapter *adapter)
 static bool
 lem_rxeof(struct adapter *adapter, int count, int *done)
 {
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	struct mbuf	*mp;
 	u8		status = 0, accept_frame = 0, eop = 0;
 	u16 		len, desc_len, prev_len_adj;
 	int		i, rx_sent = 0;
 	struct e1000_rx_desc   *current_desc;
 
+#ifdef BATCH_DISPATCH
+	struct mbuf *mh = NULL, *mt = NULL;
+#endif /* BATCH_DISPATCH */
 	EM_RX_LOCK(adapter);
+
+#ifdef BATCH_DISPATCH
+    batch_again:
+#endif /* BATCH_DISPATCH */
 	i = adapter->next_rx_desc_to_check;
 	current_desc = &adapter->rx_desc_base[i];
 	bus_dmamap_sync(adapter->rxdma.dma_tag, adapter->rxdma.dma_map,
@@ -3469,12 +3500,13 @@ lem_rxeof(struct adapter *adapter, int count, int *done)
 		return (FALSE);
 	}
 
-	while (count != 0 && ifp->if_drv_flags & IFF_DRV_RUNNING) {
+	while (count != 0 && if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
 		struct mbuf *m = NULL;
 
 		status = current_desc->status;
-		if ((status & E1000_RXD_STAT_DD) == 0)
+		if ((status & E1000_RXD_STAT_DD) == 0) {
 			break;
+		}
 
 		mp = adapter->rx_buffer_area[i].m_head;
 		/*
@@ -3523,7 +3555,7 @@ lem_rxeof(struct adapter *adapter, int count, int *done)
 
 		if (accept_frame) {
 			if (lem_get_buf(adapter, i) != 0) {
-				ifp->if_iqdrops++;
+				if_inc_counter(ifp, IFCOUNTER_IQDROPS, 1);
 				goto discard;
 			}
 
@@ -3553,8 +3585,8 @@ lem_rxeof(struct adapter *adapter, int count, int *done)
 			}
 
 			if (eop) {
-				adapter->fmp->m_pkthdr.rcvif = ifp;
-				ifp->if_ipackets++;
+				if_setrcvif(adapter->fmp, ifp);
+				if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 				lem_receive_checksum(adapter, current_desc,
 				    adapter->fmp);
 #ifndef __NO_STRICT_ALIGNMENT
@@ -3604,9 +3636,22 @@ discard:
 			i = 0;
 		/* Call into the stack */
 		if (m != NULL) {
+#ifdef BATCH_DISPATCH
+		    if (adapter->batch_enable) {
+			if (mh == NULL)
+				mh = mt = m;
+			else
+				mt->m_nextpkt = m;
+			mt = m;
+			m->m_nextpkt = NULL;
+			rx_sent++;
+			current_desc = &adapter->rx_desc_base[i];
+			continue;
+		    }
+#endif /* BATCH_DISPATCH */
 			adapter->next_rx_desc_to_check = i;
 			EM_RX_UNLOCK(adapter);
-			(*ifp->if_input)(ifp, m);
+			if_input(ifp, m);
 			EM_RX_LOCK(adapter);
 			rx_sent++;
 			i = adapter->next_rx_desc_to_check;
@@ -3614,6 +3659,20 @@ discard:
 		current_desc = &adapter->rx_desc_base[i];
 	}
 	adapter->next_rx_desc_to_check = i;
+#ifdef BATCH_DISPATCH
+	if (mh) {
+		EM_RX_UNLOCK(adapter);
+		while ( (mt = mh) != NULL) {
+			mh = mh->m_nextpkt;
+			mt->m_nextpkt = NULL;
+			if_input(ifp, mt);
+		}
+		EM_RX_LOCK(adapter);
+		i = adapter->next_rx_desc_to_check; /* in case of interrupts */
+		if (count > 0)
+			goto batch_again;
+	}
+#endif /* BATCH_DISPATCH */
 
 	/* Advance the E1000's Receive Queue #0  "Tail Pointer". */
 	if (--i < 0)
@@ -3637,7 +3696,7 @@ discard:
  * copy ethernet header to the new mbuf. The new mbuf is prepended into the
  * existing mbuf chain.
  *
- * Be aware, best performance of the 8254x is achived only when jumbo frame is
+ * Be aware, best performance of the 8254x is achieved only when jumbo frame is
  * not used at all on architectures with strict alignment.
  */
 static int
@@ -3719,12 +3778,12 @@ lem_receive_checksum(struct adapter *adapter,
  * config EVENT
  */
 static void
-lem_register_vlan(void *arg, struct ifnet *ifp, u16 vtag)
+lem_register_vlan(void *arg, if_t ifp, u16 vtag)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	u32		index, bit;
 
-	if (ifp->if_softc !=  arg)   /* Not our event */
+	if (if_getsoftc(ifp) !=  arg)   /* Not our event */
 		return;
 
 	if ((vtag == 0) || (vtag > 4095))       /* Invalid ID */
@@ -3736,7 +3795,7 @@ lem_register_vlan(void *arg, struct ifnet *ifp, u16 vtag)
 	adapter->shadow_vfta[index] |= (1 << bit);
 	++adapter->num_vlans;
 	/* Re-init to load the changes */
-	if (ifp->if_capenable & IFCAP_VLAN_HWFILTER)
+	if (if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER)
 		lem_init_locked(adapter);
 	EM_CORE_UNLOCK(adapter);
 }
@@ -3746,12 +3805,12 @@ lem_register_vlan(void *arg, struct ifnet *ifp, u16 vtag)
  * unconfig EVENT
  */
 static void
-lem_unregister_vlan(void *arg, struct ifnet *ifp, u16 vtag)
+lem_unregister_vlan(void *arg, if_t ifp, u16 vtag)
 {
-	struct adapter	*adapter = ifp->if_softc;
+	struct adapter	*adapter = if_getsoftc(ifp);
 	u32		index, bit;
 
-	if (ifp->if_softc !=  arg)
+	if (if_getsoftc(ifp) !=  arg)
 		return;
 
 	if ((vtag == 0) || (vtag > 4095))       /* Invalid */
@@ -3763,7 +3822,7 @@ lem_unregister_vlan(void *arg, struct ifnet *ifp, u16 vtag)
 	adapter->shadow_vfta[index] &= ~(1 << bit);
 	--adapter->num_vlans;
 	/* Re-init to load the changes */
-	if (ifp->if_capenable & IFCAP_VLAN_HWFILTER)
+	if (if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER)
 		lem_init_locked(adapter);
 	EM_CORE_UNLOCK(adapter);
 }
@@ -3980,7 +4039,7 @@ static void
 lem_enable_wakeup(device_t dev)
 {
 	struct adapter	*adapter = device_get_softc(dev);
-	struct ifnet	*ifp = adapter->ifp;
+	if_t ifp = adapter->ifp;
 	u32		pmc, ctrl, ctrl_ext, rctl;
 	u16     	status;
 
@@ -4005,10 +4064,10 @@ lem_enable_wakeup(device_t dev)
 	** Determine type of Wakeup: note that wol
 	** is set with all bits on by default.
 	*/
-	if ((ifp->if_capenable & IFCAP_WOL_MAGIC) == 0)
+	if ((if_getcapenable(ifp) & IFCAP_WOL_MAGIC) == 0)
 		adapter->wol &= ~E1000_WUFC_MAG;
 
-	if ((ifp->if_capenable & IFCAP_WOL_MCAST) == 0)
+	if ((if_getcapenable(ifp) & IFCAP_WOL_MCAST) == 0)
 		adapter->wol &= ~E1000_WUFC_MC;
 	else {
 		rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
@@ -4028,7 +4087,7 @@ lem_enable_wakeup(device_t dev)
         /* Request PME */
         status = pci_read_config(dev, pmc + PCIR_POWER_STATUS, 2);
 	status &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
-	if (ifp->if_capenable & IFCAP_WOL)
+	if (if_getcapenable(ifp) & IFCAP_WOL)
 		status |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
         pci_write_config(dev, pmc + PCIR_POWER_STATUS, status, 2);
 
@@ -4197,7 +4256,6 @@ lem_fill_descriptors (bus_addr_t address, u32 length,
 static void
 lem_update_stats_counters(struct adapter *adapter)
 {
-	struct ifnet   *ifp;
 
 	if(adapter->hw.phy.media_type == e1000_media_type_copper ||
 	   (E1000_READ_REG(&adapter->hw, E1000_STATUS) & E1000_STATUS_LU)) {
@@ -4272,19 +4330,29 @@ lem_update_stats_counters(struct adapter *adapter)
 		adapter->stats.tsctfc += 
 		E1000_READ_REG(&adapter->hw, E1000_TSCTFC);
 	}
-	ifp = adapter->ifp;
+}
 
-	ifp->if_collisions = adapter->stats.colc;
+static uint64_t
+lem_get_counter(if_t ifp, ift_counter cnt)
+{
+	struct adapter *adapter;
 
-	/* Rx Errors */
-	ifp->if_ierrors = adapter->dropped_pkts + adapter->stats.rxerrc +
-	    adapter->stats.crcerrs + adapter->stats.algnerrc +
-	    adapter->stats.ruc + adapter->stats.roc +
-	    adapter->stats.mpc + adapter->stats.cexterr;
+	adapter = if_getsoftc(ifp);
 
-	/* Tx Errors */
-	ifp->if_oerrors = adapter->stats.ecol +
-	    adapter->stats.latecol + adapter->watchdog_events;
+	switch (cnt) {
+	case IFCOUNTER_COLLISIONS:
+		return (adapter->stats.colc);
+	case IFCOUNTER_IERRORS:
+		return (adapter->dropped_pkts + adapter->stats.rxerrc +
+		    adapter->stats.crcerrs + adapter->stats.algnerrc +
+		    adapter->stats.ruc + adapter->stats.roc +
+		    adapter->stats.mpc + adapter->stats.cexterr);
+	case IFCOUNTER_OERRORS:
+		return (adapter->stats.ecol + adapter->stats.latecol +
+		    adapter->watchdog_events);
+	default:
+		return (if_get_counter_default(ifp, cnt));
+	}
 }
 
 /* Export a single 32-bit register via a read-only sysctl. */
@@ -4316,12 +4384,12 @@ lem_add_hw_stats(struct adapter *adapter)
 	struct sysctl_oid_list *stat_list;
 
 	/* Driver Statistics */
-	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "mbuf_alloc_fail", 
-			 CTLFLAG_RD, &adapter->mbuf_alloc_failed,
-			 "Std mbuf failed");
 	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "cluster_alloc_fail", 
 			 CTLFLAG_RD, &adapter->mbuf_cluster_failed,
 			 "Std mbuf cluster failed");
+	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "mbuf_defrag_fail", 
+			 CTLFLAG_RD, &adapter->mbuf_defrag_failed,
+			 "Defragmenting mbuf chain failed");
 	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "dropped", 
 			CTLFLAG_RD, &adapter->dropped_pkts,
 			"Driver dropped packets");
