@@ -1,9 +1,6 @@
 /*-
- * Copyright (c) 2009 The FreeBSD Foundation
+ * Copyright (c) 2012 Semihalf.
  * All rights reserved.
- *
- * This software was developed by Semihalf under sponsorship from
- * the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -17,7 +14,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -29,19 +26,27 @@
  * $FreeBSD$
  */
 
-#ifndef _MACHINE_OFW_MACHDEP_H_
-#define _MACHINE_OFW_MACHDEP_H_
+#ifndef _FLASH_SLICER_H_
+#define _FLASH_SLICER_H_
 
 #include <sys/types.h>
-#include <sys/bus.h>
-#include <sys/rman.h>
-#include <vm/vm.h>
 
-typedef	uint32_t	cell_t;
+#define FLASH_SLICES_MAX_NUM		8
+#define FLASH_SLICES_MAX_NAME_LEN	(32 + 1)
 
-struct mem_region {
-	uint64_t	mr_start;
-	uint64_t	mr_size;
+#define	FLASH_SLICES_FLAG_NONE		0
+#define	FLASH_SLICES_FLAG_RO		1	/* Read only */
+
+struct flash_slice {
+	off_t		base;
+	off_t		size;
+	char		*label;
+	unsigned int	flags;
 };
 
-#endif /* _MACHINE_OFW_MACHDEP_H_ */
+#ifdef _KERNEL
+int fdt_flash_fill_slices(device_t, struct flash_slice *, int *) __weak_symbol;
+void flash_register_slicer(int (*)(device_t, struct flash_slice *, int *));
+#endif /* _KERNEL */
+
+#endif /* _FLASH_SLICER_H_ */

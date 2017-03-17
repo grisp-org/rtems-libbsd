@@ -1,9 +1,6 @@
 /*-
- * Copyright (c) 2009 The FreeBSD Foundation
+ * Copyright (c) 2013 Nathan Whitehorn
  * All rights reserved.
- *
- * This software was developed by Semihalf under sponsorship from
- * the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -17,7 +14,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -29,19 +26,39 @@
  * $FreeBSD$
  */
 
-#ifndef _MACHINE_OFW_MACHDEP_H_
-#define _MACHINE_OFW_MACHDEP_H_
+#ifndef	_FDT_SIMPLEBUS_H
+#define	_FDT_SIMPLEBUS_H
 
-#include <sys/types.h>
-#include <sys/bus.h>
-#include <sys/rman.h>
-#include <vm/vm.h>
+#include <dev/ofw/ofw_bus.h>
 
-typedef	uint32_t	cell_t;
+/* FDT simplebus */
+DECLARE_CLASS(simplebus_driver);
 
-struct mem_region {
-	uint64_t	mr_start;
-	uint64_t	mr_size;
+struct simplebus_range {
+	uint64_t bus;
+	uint64_t host;
+	uint64_t size;
 };
 
-#endif /* _MACHINE_OFW_MACHDEP_H_ */
+/* devinfo and softc */
+struct simplebus_softc {
+	device_t dev;
+	phandle_t node;
+
+	struct simplebus_range *ranges;
+	int nranges;
+
+	pcell_t acells, scells;
+};
+
+struct simplebus_devinfo {
+	struct ofw_bus_devinfo	obdinfo;
+	struct resource_list	rl;
+};
+
+void simplebus_init(device_t dev, phandle_t node);
+device_t simplebus_add_device(device_t dev, phandle_t node, u_int order,
+    const char *name, int unit, struct simplebus_devinfo *di);
+struct simplebus_devinfo *simplebus_setup_dinfo(device_t dev, phandle_t node,
+    struct simplebus_devinfo *di);
+#endif	/* _FDT_SIMPLEBUS_H */

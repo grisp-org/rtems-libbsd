@@ -51,6 +51,8 @@ def rtems(mm):
             'local/cryptodev_if.c',
             'local/device_if.c',
             'local/miibus_if.c',
+            'local/ofw_bus_if.c',
+            'local/ofw_if.c',
             'local/pcib_if.c',
             'local/pci_if.c',
             'local/usb_if.c',
@@ -390,6 +392,44 @@ def base(mm):
             'sys/libkern/random.c',
             'sys/vm/uma_core.c',
             'sys/vm/uma_dbg.c',
+        ],
+        mm.generator['source']()
+    )
+    return mod
+
+#
+# FDT
+#
+def fdt(mm):
+    mod = builder.Module('fdt')
+    mod.addKernelSpaceHeaderFiles(
+        [
+            'sys/sys/slicer.h',
+            'sys/dev/fdt/fdt_common.h',
+            'sys/dev/fdt/simplebus.h',
+            'sys/dev/ofw/ofw_bus.h',
+            'sys/dev/ofw/ofw_bus_subr.h',
+            'sys/dev/ofw/ofw_subr.h',
+            'sys/dev/ofw/ofw_pci.h',
+            'sys/dev/ofw/ofwvar.h',
+            'sys/dev/ofw/openfirm.h',
+        ]
+    )
+    mod.addKernelSpaceSourceFiles(
+        [
+            'sys/dev/fdt/simplebus.c',
+            'sys/dev/fdt/fdt_common.c',
+            'sys/dev/ofw/ofwbus.c',
+            'sys/dev/ofw/openfirm.c',
+            'sys/dev/ofw/ofw_fdt.c',
+            'sys/dev/ofw/ofw_bus_subr.c',
+            'sys/dev/ofw/ofw_subr.c',
+        ],
+        mm.generator['source']()
+    )
+    mod.addRTEMSSourceFiles(
+        [
+            'rtems/ofw_machdep.c',
         ],
         mm.generator['source']()
     )
@@ -1109,6 +1149,7 @@ def dev_net(mm):
             'sys/dev/mii/ukphy.c',
             'sys/dev/mii/ukphy_subr.c',
             'sys/dev/tsec/if_tsec.c',
+            'sys/dev/tsec/if_tsec_fdt.c',
             'sys/dev/cadence/if_cgem.c',
             'sys/dev/dwc/if_dwc.c',
             'sys/arm/xilinx/zy7_slcr.c',
@@ -3045,6 +3086,7 @@ def sources(mm):
     mm.addModule(rtems(mm))
     mm.addModule(base(mm))
 
+    mm.addModule(fdt(mm))
     mm.addModule(mmc(mm))
 
     mm.addModule(dev_usb(mm))
