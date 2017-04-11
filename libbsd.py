@@ -586,6 +586,8 @@ def dev_usb_controller(mm):
             'sys/dev/usb/controller/xhcireg.h',
             'sys/dev/usb/controller/dwc_otg.h',
             'sys/dev/usb/controller/dwc_otgreg.h',
+            'sys/dev/usb/controller/saf1761_otg.h',
+            'sys/dev/usb/controller/saf1761_otg_reg.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
@@ -594,6 +596,8 @@ def dev_usb_controller(mm):
             'sys/dev/usb/controller/ehci.c',
             'sys/dev/usb/controller/usb_controller.c',
             'sys/dev/usb/controller/dwc_otg.c',
+            'sys/dev/usb/controller/saf1761_otg.c',
+            'sys/dev/usb/controller/saf1761_otg_fdt.c',
         ],
         mm.generator['source']()
     )

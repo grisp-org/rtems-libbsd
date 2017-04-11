@@ -102,17 +102,26 @@ static driver_t saf1761_otg_driver = {
 
 static devclass_t saf1761_otg_devclass;
 
+#ifndef __rtems__
 DRIVER_MODULE(saf1761otg, simplebus, saf1761_otg_driver, saf1761_otg_devclass, 0, 0);
+#else /* __rtems__ */
+DRIVER_MODULE(saf1761otg, nexus, saf1761_otg_driver, saf1761_otg_devclass, 0, 0);
+#endif /* __rtems__ */
 MODULE_DEPEND(saf1761otg, usb, 1, 1, 1);
 
 static int
 saf1761_otg_fdt_probe(device_t dev)
 {
+#ifndef __rtems__
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "nxp,usb-isp1761"))
 		return (ENXIO);
+#else /* __rtems__ */
+	if (device_get_unit(dev) != 0)
+		return (ENXIO);
+#endif /* __rtems__ */
 
 	device_set_desc(dev, "ISP1761/SAF1761 DCI USB 2.0 Device Controller");
 
@@ -127,6 +136,7 @@ saf1761_otg_fdt_attach(device_t dev)
 	int err;
 	int rid;
 
+#ifndef __rtems__
 	/* get configuration from FDT */
 
 	/* get bus-width, if any */
@@ -171,6 +181,10 @@ saf1761_otg_fdt_attach(device_t dev)
 		sc->sc_interrupt_cfg |= SOTG_INTERRUPT_CFG_INTLVL;
 		sc->sc_hw_mode |= SOTG_HW_MODE_CTRL_INTR_LEVEL;
 	}
+#else /* __rtems__ */
+	/* set 16-bit data bus */
+	sc->sc_hw_mode = 0;
+#endif /* __rtems__ */
 
 	/* initialise some bus fields */
 	sc->sc_bus.parent = dev;

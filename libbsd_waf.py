@@ -885,6 +885,8 @@ def build(bld):
               'freebsd/sys/dev/usb/controller/dwc_otg.c',
               'freebsd/sys/dev/usb/controller/ehci.c',
               'freebsd/sys/dev/usb/controller/ohci.c',
+              'freebsd/sys/dev/usb/controller/saf1761_otg.c',
+              'freebsd/sys/dev/usb/controller/saf1761_otg_fdt.c',
               'freebsd/sys/dev/usb/controller/usb_controller.c',
               'freebsd/sys/dev/usb/net/if_aue.c',
               'freebsd/sys/dev/usb/net/if_axe.c',
