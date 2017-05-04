@@ -82,6 +82,11 @@
 
 #include <dev/usb/controller/saf1761_otg.h>
 #include <dev/usb/controller/saf1761_otg_reg.h>
+#ifdef __rtems__
+#include <rtems.h>
+#include <bsp.h>
+#include <bsp/pin-config.h>
+#endif /* __rtems__ */
 
 #define	SAF1761_OTG_BUS2SC(bus) \
    ((struct saf1761_otg_softc *)(((uint8_t *)(bus)) - \
@@ -1623,6 +1628,13 @@ saf1761_otg_filter_interrupt(void *arg)
 
 	USB_BUS_SPIN_UNLOCK(&sc->sc_bus);
 
+#ifdef __rtems__
+	const Pio *saf_irq_pio = PIOC;
+	/* The PIOC is used only by the SAF1761. So we can just reset the status
+	 * without any further handling. */
+	(void) saf_irq_pio->PIO_ISR;
+
+#endif /* __rtems__ */
 	return (retval);
 }
 
