@@ -270,7 +270,7 @@ extern "C" {
         .start_actual = (_irq)                                           \
       }                                                                  \
     };                                                                   \
-    RTEMS_BSD_DEFINE_NEXUS_DEVICE(usb_saf1761_otg, 0,                    \
+    RTEMS_BSD_DEFINE_NEXUS_DEVICE(saf1761otg, 0,                         \
                                   RTEMS_ARRAY_SIZE(usb_saf1761_otg_res), \
                                   &usb_saf1761_otg_res[0])
 #endif /* RTEMS_BSD_DRIVER_USB_SAF1761_OTG */
