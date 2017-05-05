@@ -599,7 +599,7 @@ def dev_usb_controller(mm):
             'sys/dev/usb/controller/saf1761_otg.c',
             'sys/dev/usb/controller/saf1761_otg_fdt.c',
         ],
-        mm.generator['source']()
+        mm.generator['source']('-DUSB_DEBUG')
     )
     return mod
 

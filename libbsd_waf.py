@@ -34,7 +34,7 @@ def configure(conf):
 def build(bld):
     # C/C++ flags
     common_flags = []
-    common_flags += ["-O0"]
+    common_flags += ["-O2"]
     common_flags += ["-g"]
     common_flags += ["-fno-strict-aliasing"]
     common_flags += ["-ffreestanding"]
@@ -488,7 +488,21 @@ def build(bld):
                 source = objs03_source)
     libbsd_use += ["objs03"]
 
-    objs04_source = ['freebsd/lib/libc/db/btree/bt_close.c',
+    objs04_source = ['freebsd/sys/dev/usb/controller/dwc_otg.c',
+                     'freebsd/sys/dev/usb/controller/ehci.c',
+                     'freebsd/sys/dev/usb/controller/ohci.c',
+                     'freebsd/sys/dev/usb/controller/saf1761_otg.c',
+                     'freebsd/sys/dev/usb/controller/saf1761_otg_fdt.c',
+                     'freebsd/sys/dev/usb/controller/usb_controller.c']
+    bld.objects(target = "objs04",
+                features = "c",
+                cflags = cflags,
+                includes = [] + includes,
+                defines = defines + ['USB_DEBUG'],
+                source = objs04_source)
+    libbsd_use += ["objs04"]
+
+    objs05_source = ['freebsd/lib/libc/db/btree/bt_close.c',
                      'freebsd/lib/libc/db/btree/bt_conv.c',
                      'freebsd/lib/libc/db/btree/bt_debug.c',
                      'freebsd/lib/libc/db/btree/bt_delete.c',
@@ -512,15 +526,15 @@ def build(bld):
                      'freebsd/lib/libc/db/recno/rec_search.c',
                      'freebsd/lib/libc/db/recno/rec_seq.c',
                      'freebsd/lib/libc/db/recno/rec_utils.c']
-    bld.objects(target = "objs04",
+    bld.objects(target = "objs05",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
                 defines = defines + ['INET6', '__DBINTERFACE_PRIVATE'],
-                source = objs04_source)
-    libbsd_use += ["objs04"]
+                source = objs05_source)
+    libbsd_use += ["objs05"]
 
-    objs05_source = ['dhcpcd/arp.c',
+    objs06_source = ['dhcpcd/arp.c',
                      'dhcpcd/auth.c',
                      'dhcpcd/bpf.c',
                      'dhcpcd/common.c',
@@ -542,15 +556,15 @@ def build(bld):
                      'dhcpcd/ipv6nd.c',
                      'dhcpcd/net.c',
                      'dhcpcd/platform-bsd.c']
-    bld.objects(target = "objs05",
+    bld.objects(target = "objs06",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
                 defines = defines + ['INET', 'INET6', 'MASTER_ONLY', 'THERE_IS_NO_FORK', '__FreeBSD__'],
-                source = objs05_source)
-    libbsd_use += ["objs05"]
+                source = objs06_source)
+    libbsd_use += ["objs06"]
 
-    objs06_source = ['freebsd/contrib/libpcap/bpf_image.c',
+    objs07_source = ['freebsd/contrib/libpcap/bpf_image.c',
                      'freebsd/contrib/libpcap/etherent.c',
                      'freebsd/contrib/libpcap/fad-getad.c',
                      'freebsd/contrib/libpcap/gencode.c',
@@ -563,15 +577,15 @@ def build(bld):
                      'freebsd/contrib/libpcap/savefile.c',
                      'freebsd/contrib/libpcap/sf-pcap-ng.c',
                      'freebsd/contrib/libpcap/sf-pcap.c']
-    bld.objects(target = "objs06",
+    bld.objects(target = "objs07",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
                 defines = defines + ['BSD=1', 'HAVE_INTTYPES=1', 'HAVE_LIMITS_H=1', 'HAVE_NET_IF_MEDIA_H=1', 'HAVE_SNPRINTF=1', 'HAVE_SOCKADDR_SA_LEN=1', 'HAVE_STDINT=1', 'HAVE_STRERROR=1', 'HAVE_STRLCPY=1', 'HAVE_SYS_IOCCOM_H=1', 'HAVE_VSNPRINTF=1', 'INET6', '_U_=__attribute__((unused))', '__FreeBSD__=1'],
-                source = objs06_source)
-    libbsd_use += ["objs06"]
+                source = objs07_source)
+    libbsd_use += ["objs07"]
 
-    objs07_source = ['freebsd/contrib/tcpdump/addrtoname.c',
+    objs08_source = ['freebsd/contrib/tcpdump/addrtoname.c',
                      'freebsd/contrib/tcpdump/af.c',
                      'freebsd/contrib/tcpdump/bpf_dump.c',
                      'freebsd/contrib/tcpdump/checksum.c',
@@ -714,13 +728,13 @@ def build(bld):
                      'freebsd/contrib/tcpdump/smbutil.c',
                      'freebsd/contrib/tcpdump/tcpdump.c',
                      'freebsd/contrib/tcpdump/util.c']
-    bld.objects(target = "objs07",
+    bld.objects(target = "objs08",
                 features = "c",
                 cflags = cflags,
                 includes = ['freebsd/contrib/tcpdump', 'freebsd/usr.sbin/tcpdump/tcpdump'] + includes,
                 defines = defines + ['HAVE_CONFIG_H=1', 'HAVE_NET_PFVAR_H=1', 'INET6', '_U_=__attribute__((unused))', '__FreeBSD__=1'],
-                source = objs07_source)
-    libbsd_use += ["objs07"]
+                source = objs08_source)
+    libbsd_use += ["objs08"]
 
     source = ['freebsd/sys/arm/at91/at91_mci.c',
               'freebsd/sys/arm/lpc/if_lpe.c',
@@ -892,12 +906,6 @@ def build(bld):
               'freebsd/sys/dev/smc/if_smc.c',
               'freebsd/sys/dev/tsec/if_tsec.c',
               'freebsd/sys/dev/tsec/if_tsec_fdt.c',
-              'freebsd/sys/dev/usb/controller/dwc_otg.c',
-              'freebsd/sys/dev/usb/controller/ehci.c',
-              'freebsd/sys/dev/usb/controller/ohci.c',
-              'freebsd/sys/dev/usb/controller/saf1761_otg.c',
-              'freebsd/sys/dev/usb/controller/saf1761_otg_fdt.c',
-              'freebsd/sys/dev/usb/controller/usb_controller.c',
               'freebsd/sys/dev/usb/net/if_aue.c',
               'freebsd/sys/dev/usb/net/if_axe.c',
               'freebsd/sys/dev/usb/net/if_axge.c',
