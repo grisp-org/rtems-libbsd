@@ -1595,6 +1595,9 @@ saf1761_otg_filter_interrupt(void *arg)
 	(void) SAF1761_READ_LE_4(sc, SOTG_ATL_PTD_DONE_PTD);
 	(void) SAF1761_READ_LE_4(sc, SOTG_INT_PTD_DONE_PTD);
 	(void) SAF1761_READ_LE_4(sc, SOTG_ISO_PTD_DONE_PTD);
+#ifdef __rtems__
+	DPRINTF("HCINTERRUPT=0x%08x DCINTERRUPT=0x%08x\n", hcstat, status);
+#endif /* __rtems__ */
 
 	if (status & SOTG_DCINTERRUPT_IEPSOF) {
 		if ((sc->sc_host_async_busy_map[1] | sc->sc_host_async_busy_map[0] |
