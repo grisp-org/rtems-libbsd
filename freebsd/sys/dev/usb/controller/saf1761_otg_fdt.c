@@ -80,7 +80,9 @@
 #ifdef __rtems__
 #include <rtems.h>
 #include <bsp.h>
+#ifdef LIBBSP_ARM_ATSAM_BSP_H
 #include <bsp/pin-config.h>
+#endif /* LIBBSP_ARM_ATSAM_BSP_H */
 #endif /* __rtems__ */
 
 static device_probe_t saf1761_otg_fdt_probe;
@@ -233,11 +235,13 @@ saf1761_otg_fdt_attach(device_t dev)
 	device_set_ivars(sc->sc_bus.bdev, &sc->sc_bus);
 
 #ifdef __rtems__
+#ifdef LIBBSP_ARM_ATSAM_BSP_H
 	const Pin saf_irq = {PIO_PC16, PIOC, ID_PIOC, PIO_INPUT, PIO_PULLUP | PIO_IT_LOW_LEVEL};
 	/* Activate pin interrupt. Add a default handler that just clears the
 	 * status. */
 	PIO_Configure(&saf_irq, 1);
 	PIO_EnableIt(&saf_irq);
+#endif /* LIBBSP_ARM_ATSAM_BSP_H */
 #endif /* __rtems__ */
 	err = bus_setup_intr(dev, sc->sc_irq_res, INTR_TYPE_TTY | INTR_MPSAFE,
 	    &saf1761_otg_filter_interrupt, &saf1761_otg_interrupt, sc, &sc->sc_intr_hdl);
