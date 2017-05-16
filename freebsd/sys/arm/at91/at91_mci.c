@@ -76,16 +76,15 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_at91.h>
 #ifdef __rtems__
+#ifdef LIBBSP_ARM_ATSAM_BSP_H
 /* Everything necessary for the DMA */
 #include <libchip/chip.h>
 static sXdmad xdmad;
 static sXdmadCfg xdmadCfg;
 #define XDMAD_ID_HSMCI 0
+#endif /* LIBBSP_ARM_ATSAM_BSP_H */
 #endif /* __rtems__ */
 
-#ifdef __rtems__
-#include <libchip/chip.h>
-#endif /* __rtems__ */
 /*
  * About running the MCI bus above 25MHz
  *
@@ -406,7 +405,9 @@ at91_mci_attach(device_t dev)
 	int err, i;
 
 #ifdef __rtems__
+#ifdef LIBBSP_ARM_ATSAM_BSP_H
 	PMC_EnablePeripheral(ID_HSMCI);
+#endif /* LIBBSP_ARM_ATSAM_BSP_H */
 #endif /* __rtems__ */
 	sctx = device_get_sysctl_ctx(dev);
 	soid = device_get_sysctl_tree(dev);
