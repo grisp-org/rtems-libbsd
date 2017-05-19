@@ -2473,10 +2473,8 @@ saf1761_otg_init(struct saf1761_otg_softc *sc)
 	    SOTG_CTRL_BDIS_ACON_EN | SOTG_CTRL_SEL_CP_EXT |
 	    SOTG_CTRL_VBUS_DRV));
 #else /* __rtems__ */
-	SAF1761_WRITE_LE_4(sc, SOTG_OTG_CTRL, 0x0080 << 16);
 	SAF1761_WRITE_LE_4(sc, SOTG_CTRL_SET_CLR,
-	    SOTG_CTRL_SET(SOTG_CTRL_OTG_DISABLE |
-	    SOTG_CTRL_VBUS_DRV | SOTG_CTRL_SEL_CP_EXT));
+	    SOTG_CTRL_SET(SOTG_CTRL_SEL_CP_EXT | SOTG_CTRL_VBUS_DRV));
 #endif /* __rtems__ */
 
 	/* disable device address */
