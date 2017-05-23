@@ -32,6 +32,12 @@
 #ifndef _OHCI_H_
 #define	_OHCI_H_
 
+#ifdef __rtems__
+#ifdef BSP_USB_OTG_TRANSCEIVER_I2C_ADDR
+#include <dev/usb/usb_otg_transceiver.h>
+#endif /* BSP_USB_OTG_TRANSCEIVER_I2C_ADDR */
+
+#endif /* __rtems__ */
 #define	OHCI_MAX_DEVICES MIN(USB_MAX_DEVICES, 128)
 
 #define	OHCI_NO_INTRS		32
