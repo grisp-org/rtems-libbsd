@@ -517,14 +517,24 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 		uint32_t status;
 		uint32_t count;
 		uint8_t got_short;
+#ifdef __rtems__
+		uint32_t dw0;
+#endif /* __rtems__ */
 
 		pdt_addr = SOTG_PTD(td->channel);
 
 		status = saf1761_peek_host_status_le_4(sc, pdt_addr + SOTG_PTD_DW3);
+#ifdef __rtems__
+		dw0 = saf1761_peek_host_status_le_4(sc, pdt_addr + SOTG_PTD_DW0);
+#endif /* __rtems__ */
 
 		DPRINTFN(5, "STATUS=0x%08x\n", status);
 
+#ifdef __rtems__
+		if (dw0 & SOTG_PTD_DW0_VALID) {
+#else /* __rtems__ */
 		if (status & SOTG_PTD_DW3_ACTIVE) {
+#endif /* __rtems__ */
 			goto busy;
 		} else if (status & SOTG_PTD_DW3_HALTED) {
 			if (!(status & SOTG_PTD_DW3_ERRORS))
