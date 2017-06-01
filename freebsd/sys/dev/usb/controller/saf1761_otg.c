@@ -517,23 +517,28 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 		uint32_t status;
 		uint32_t count;
 		uint8_t got_short;
-#ifdef __rtems__
-		uint32_t dw0;
-#endif /* __rtems__ */
 
 		pdt_addr = SOTG_PTD(td->channel);
 
 		status = saf1761_peek_host_status_le_4(sc, pdt_addr + SOTG_PTD_DW3);
-#ifdef __rtems__
-		dw0 = saf1761_peek_host_status_le_4(sc, pdt_addr + SOTG_PTD_DW0);
-#endif /* __rtems__ */
 
 		DPRINTFN(5, "STATUS=0x%08x\n", status);
 
-#ifdef __rtems__
-		if (dw0 & SOTG_PTD_DW0_VALID) {
-#else /* __rtems__ */
 		if (status & SOTG_PTD_DW3_ACTIVE) {
+#ifdef __rtems__
+			uint32_t dw0 = saf1761_peek_host_status_le_4(sc,
+			    pdt_addr + SOTG_PTD_DW0);
+			if ((dw0 & SOTG_PTD_DW0_VALID) == 0) {
+				/* Assume that we have to retry in that case. */
+				temp = SOTG_PTD_DW3_ACTIVE |
+				    (td->toggle << 25) | SOTG_PTD_DW3_CERR_2;
+				SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW3,
+				    temp);
+
+				dw0 |= SOTG_PTD_DW0_VALID;
+				SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW0,
+				    dw0);
+			}
 #endif /* __rtems__ */
 			goto busy;
 		} else if (status & SOTG_PTD_DW3_HALTED) {
@@ -591,7 +596,6 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 	/* receive one more packet */
 
 	pdt_addr = SOTG_PTD(td->channel);
-
 	SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW7, 0);
 	SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW6, 0);
 	SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW5, 0);
@@ -599,12 +603,15 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 
 	temp = SOTG_PTD_DW3_ACTIVE | (td->toggle << 25) |
 	    SOTG_PTD_DW3_CERR_2;
+	uint32_t dw3 = temp;
 	SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW3, temp);
 
 	temp = (SOTG_HC_MEMORY_ADDR(SOTG_DATA_ADDR(td->channel)) << 8);
+	uint32_t dw2 = temp;
 	SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW2, temp);
 
 	temp = td->dw1_value | (1 << 10) /* IN-PID */ | (td->ep_index >> 1);
+	uint32_t dw1 = temp;
 	SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW1, temp);
 
 	temp = (td->ep_index << 31) | (1 << 29) /* pkt-multiplier */ |
@@ -1608,6 +1615,19 @@ saf1761_otg_filter_interrupt(void *arg)
 	(void) SAF1761_READ_LE_4(sc, SOTG_INT_PTD_DONE_PTD);
 	(void) SAF1761_READ_LE_4(sc, SOTG_ISO_PTD_DONE_PTD);
 #ifdef __rtems__
+	static uint32_t hcstatcnt[32] = {0};
+	static uint32_t dcstatcnt[32] = {0};
+
+	for (size_t i = 0; i<32; ++i) {
+		uint32_t mask = 1 << i;
+		if (hcstat & mask) {
+			++hcstatcnt[i];
+		}
+		if (status & mask) {
+			++dcstatcnt[i];
+		}
+	}
+
 	DPRINTF("HCINTERRUPT=0x%08x DCINTERRUPT=0x%08x\n", hcstat, status);
 #endif /* __rtems__ */
 
