@@ -25,8 +25,8 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_wlan.h>
 
-#include <rtems/bsd/sys/param.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/param.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/condvar.h>
 #include <sys/mbuf.h>

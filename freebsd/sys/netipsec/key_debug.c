@@ -38,10 +38,10 @@
 #include <rtems/bsd/local/opt_ipsec.h>
 #endif
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>

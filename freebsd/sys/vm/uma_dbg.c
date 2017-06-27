@@ -37,13 +37,13 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_vm.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bitset.h>
 #include <sys/kernel.h>
 #include <sys/types.h>
 #include <sys/queue.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/malloc.h>
 

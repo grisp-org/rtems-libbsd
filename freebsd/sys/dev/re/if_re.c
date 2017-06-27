@@ -114,7 +114,7 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_device_polling.h>
 #endif
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/endian.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
@@ -123,7 +123,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/module.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>

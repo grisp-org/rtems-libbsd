@@ -25,7 +25,7 @@ __FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
@@ -196,11 +196,13 @@ inet_ntop6(const u_char *src, char *dst, socklen_t size)
 	return (dst);
 }
 
+#ifndef __rtems__
 /*
  * Weak aliases for applications that use certain private entry points,
  * and fail to include <arpa/inet.h>.
  */
 #undef inet_ntop
 __weak_reference(__inet_ntop, inet_ntop);
+#endif /* __rtems__ */
 
 /*! \file */

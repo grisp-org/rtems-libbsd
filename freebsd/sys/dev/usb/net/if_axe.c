@@ -78,13 +78,13 @@ __FBSDID("$FreeBSD$");
  * http://www.asix.com.tw/FrootAttach/datasheet/AX88772_datasheet_Rev10.pdf
  */
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/condvar.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>

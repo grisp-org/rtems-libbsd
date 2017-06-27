@@ -25,7 +25,7 @@ __FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
@@ -111,6 +111,7 @@ inet_nsap_ntoa(int binlen, const u_char *binary, char *ascii) {
 	return (start);
 }
 
+#ifndef __rtems__
 /*
  * Weak aliases for applications that use certain private entry points,
  * and fail to include <arpa/inet.h>.
@@ -119,5 +120,6 @@ inet_nsap_ntoa(int binlen, const u_char *binary, char *ascii) {
 __weak_reference(__inet_nsap_addr, inet_nsap_addr);
 #undef inet_nsap_ntoa
 __weak_reference(__inet_nsap_ntoa, inet_nsap_ntoa);
+#endif /* __rtems__ */
 
 /*! \file */

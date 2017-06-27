@@ -31,7 +31,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/eventhandler.h>
@@ -39,7 +39,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysproto.h>
 #include <sys/sysent.h>
 #include <sys/proc.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/reboot.h>
 #include <sys/sx.h>

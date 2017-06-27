@@ -69,11 +69,11 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_inet6.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/malloc.h>
 #include <sys/proc.h>

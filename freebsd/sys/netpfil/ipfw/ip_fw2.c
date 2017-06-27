@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_inet6.h>
 #include <rtems/bsd/local/opt_ipsec.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/condvar.h>
 #include <sys/counter.h>
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/jail.h>
 #include <sys/module.h>
 #include <sys/priv.h>

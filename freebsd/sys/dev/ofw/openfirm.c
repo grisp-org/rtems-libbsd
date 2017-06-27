@@ -62,9 +62,9 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_platform.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/queue.h>

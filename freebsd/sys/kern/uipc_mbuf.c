@@ -38,11 +38,11 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_mbuf_stress_test.h>
 #include <rtems/bsd/local/opt_mbuf_profiling.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/sysctl.h>

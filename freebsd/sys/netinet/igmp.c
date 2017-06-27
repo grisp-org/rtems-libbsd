@@ -54,7 +54,7 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_ddb.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
@@ -62,7 +62,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/socket.h>
 #include <sys/protosw.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rmlock.h>
 #include <sys/sysctl.h>
 #include <sys/ktr.h>

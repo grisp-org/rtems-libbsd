@@ -67,10 +67,10 @@ __FBSDID("$FreeBSD$");
  * for these devices does not work in this way and so does not work
  * with this driver.
  */
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/sockio.h>
 #include <sys/sysctl.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/mbuf.h>
 #include <sys/kernel.h>

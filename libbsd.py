@@ -78,6 +78,7 @@ def rtems(mm):
             'rtems/rtems-bsd-shell-pfctl.c',
             'rtems/rtems-bsd-shell-ping.c',
             'rtems/rtems-bsd-shell-route.c',
+            'rtems/rtems-bsd-shell-stty.c',
             'rtems/rtems-bsd-shell-sysctl.c',
             'rtems/rtems-bsd-shell-tcpdump.c',
             'rtems/rtems-bsd-shell-vmstat.c',
@@ -150,6 +151,7 @@ def rtems(mm):
             'pppd/sys-rtems.c',
             'pppd/upap.c',
             'pppd/utils.c',
+            'sys/dev/input/touchscreen/tsc_lpc32xx.c',
             'sys/dev/usb/controller/ehci_mpc83xx.c',
             'sys/dev/usb/controller/ohci_lpc.c',
             'sys/dev/usb/controller/ohci_lpc32xx.c',
@@ -219,9 +221,6 @@ def base(mm):
             'sys/security/mac/mac_framework.h',
             'sys/sys/acl.h',
             'sys/sys/aio.h',
-            'sys/sys/_bitset.h',
-            'sys/sys/bitset.h',
-            'sys/sys/bitstring.h',
             'sys/sys/bufobj.h',
             'sys/sys/buf_ring.h',
             'sys/sys/_bus_dma.h',
@@ -236,7 +235,6 @@ def base(mm):
             'sys/sys/conf.h',
             'sys/sys/counter.h',
             'sys/sys/cpu.h',
-            'sys/sys/_cpuset.h',
             'sys/sys/ctype.h',
             'sys/sys/domain.h',
             'sys/sys/eventhandler.h',
@@ -306,9 +304,7 @@ def base(mm):
             'sys/sys/signalvar.h',
             'sys/sys/smp.h',
             'sys/sys/sleepqueue.h',
-            'sys/sys/_sockaddr_storage.h',
             'sys/sys/sockbuf.h',
-            'sys/sys/socket.h',
             'sys/sys/socketvar.h',
             'sys/sys/sockopt.h',
             'sys/sys/sockstate.h',
@@ -393,6 +389,7 @@ def base(mm):
             'sys/libkern/jenkins_hash.c',
             'sys/libkern/murmur3_32.c',
             'sys/libkern/random.c',
+            'sys/fs/devfs/devfs_vnops.c',
             'sys/vm/uma_core.c',
             'sys/vm/uma_dbg.c',
         ],
@@ -439,6 +436,39 @@ def fdt(mm):
     return mod
 
 #
+# TTY
+#
+def tty(mm):
+    mod = builder.Module('tty')
+    mod.addKernelSpaceHeaderFiles(
+        [
+            'sys/sys/tty.h',
+            'sys/sys/ttyqueue.h',
+            'sys/sys/ttydisc.h',
+            'sys/sys/ttydevsw.h',
+            'sys/sys/ttyhook.h',
+            'sys/sys/cons.h',
+            'sys/sys/serial.h',
+        ]
+    )
+    mod.addKernelSpaceSourceFiles(
+        [
+            'sys/kern/tty.c',
+            'sys/kern/tty_inq.c',
+            'sys/kern/tty_outq.c',
+            'sys/kern/tty_ttydisc.c',
+        ],
+        mm.generator['source']()
+    )
+#    mod.addRTEMSSourceFiles(
+#        [
+#            'rtems/ofw_machdep.c',
+#        ],
+#        mm.generator['source']()
+#    )
+    return mod
+
+#
 # MMC
 #
 def mmc(mm):
@@ -465,6 +495,53 @@ def mmc(mm):
             'sys/dev/mmc/mmc.c',
             'sys/dev/mmc/mmcsd.c',
             'sys/dev/mmc/mmc_subr.c',
+        ],
+        mm.generator['source']()
+    )
+    return mod
+
+#
+# Input
+#
+def dev_input(mm):
+    mod = builder.Module('dev_input')
+    mod.addKernelSpaceHeaderFiles(
+        [
+            'sys/sys/kbio.h',
+            'sys/dev/kbd/kbdreg.h',
+            'sys/dev/kbd/kbdtables.h',
+            'sys/sys/mouse.h',
+        ]
+    )
+    mod.addKernelSpaceSourceFiles(
+        [
+            'sys/dev/kbd/kbd.c',
+        ],
+        mm.generator['source']()
+    )
+    return mod
+
+#
+# EVDEV
+#
+def evdev(mm):
+    mod = builder.Module('evdev')
+    mod.addKernelSpaceHeaderFiles(
+        [
+            'sys/dev/evdev/evdev.h',
+            'sys/dev/evdev/evdev_private.h',
+            'sys/dev/evdev/input.h',
+            'sys/dev/evdev/input-event-codes.h',
+            'sys/dev/evdev/uinput.h',
+        ]
+    )
+    mod.addKernelSpaceSourceFiles(
+        [
+            'sys/dev/evdev/cdev.c',
+            'sys/dev/evdev/evdev.c',
+            'sys/dev/evdev/evdev_mt.c',
+            'sys/dev/evdev/evdev_utils.c',
+            'sys/dev/evdev/uinput.c',
         ],
         mm.generator['source']()
     )
@@ -646,38 +723,17 @@ def dev_usb_input(mm):
     mod.addDependency(mm['dev_usb'])
     mod.addKernelSpaceHeaderFiles(
         [
-    'sys/dev/usb/input/usb_rdesc.h',
+            'sys/dev/usb/input/usb_rdesc.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
         [
+            'sys/dev/usb/input/atp.c',
+            'sys/dev/usb/input/uep.c',
             'sys/dev/usb/input/uhid.c',
             'sys/dev/usb/input/ukbd.c',
-        ],
-        mm.generator['source']()
-    )
-    return mod
-
-#
-# USB Mouse
-#
-def dev_usb_mouse(mm):
-    mod = builder.Module('dev_usb_mouse')
-    mod.addDependency(mm['dev_usb'])
-    mod.addKernelSpaceHeaderFiles(
-        [
-            'sys/sys/tty.h',
-            'sys/sys/mouse.h',
-            'sys/sys/ttyqueue.h',
-            'sys/sys/ttydefaults.h',
-            'sys/sys/ttydisc.h',
-            'sys/sys/ttydevsw.h',
-            'sys/sys/ttyhook.h',
-        ]
-    )
-    mod.addKernelSpaceSourceFiles(
-        [
             'sys/dev/usb/input/ums.c',
+            'sys/dev/usb/input/wsp.c',
         ],
         mm.generator['source']()
     )
@@ -777,7 +833,9 @@ def dev_usb_serial(mm):
     mod.addKernelSpaceHeaderFiles(
         [
             'sys/dev/usb/serial/uftdi_reg.h',
+            'sys/dev/usb/serial/umcs.h',
             'sys/dev/usb/serial/usb_serial.h',
+            'sys/dev/usb/uftdiio.h',
         ]
     )
     mod.addKernelSpaceSourceFiles(
@@ -793,6 +851,7 @@ def dev_usb_serial(mm):
             'sys/dev/usb/serial/ugensa.c',
             'sys/dev/usb/serial/uipaq.c',
             'sys/dev/usb/serial/ulpt.c',
+            'sys/dev/usb/serial/umcs.c',
             'sys/dev/usb/serial/umct.c',
             'sys/dev/usb/serial/umodem.c',
             'sys/dev/usb/serial/umoscom.c',
@@ -1148,7 +1207,6 @@ def dev_net(mm):
             'sys/net/ethernet.h',
             'sys/net/if_arp.h',
             'sys/net/if_dl.h',
-            'sys/net/if.h',
             'sys/net/iflib.h',
             'sys/net/if_media.h',
             'sys/net/ifq.h',
@@ -1205,11 +1263,6 @@ def dev_nic(mm):
             'sys/isa/pnpvar.h',
             'sys/sys/buf.h',
             'sys/sys/mqueue.h',
-            'sys/sys/tty.h',
-            'sys/sys/ttyqueue.h',
-            'sys/sys/ttydisc.h',
-            'sys/sys/ttydevsw.h',
-            'sys/sys/ttyhook.h',
             'sys/sys/user.h',
         ]
     )
@@ -1443,7 +1496,6 @@ def net(mm):
             'sys/net/if_enc.h',
             'sys/net/if_gif.h',
             'sys/net/if_gre.h',
-            'sys/net/if.h',
             'sys/net/if_lagg.h',
             'sys/net/if_llatbl.h',
             'sys/net/if_llc.h',
@@ -1541,7 +1593,6 @@ def netinet(mm):
             'sys/netinet/if_ether.h',
             'sys/netinet/igmp.h',
             'sys/netinet/igmp_var.h',
-            'sys/netinet/in.h',
             'sys/netinet/in_kdtrace.h',
             'sys/netinet/in_pcb.h',
             'sys/netinet/in_rss.h',
@@ -1586,7 +1637,6 @@ def netinet(mm):
             'sys/netinet/sctp_var.h',
             'sys/netinet/tcp_debug.h',
             'sys/netinet/tcp_fsm.h',
-            'sys/netinet/tcp.h',
             'sys/netinet/tcp_hostcache.h',
             'sys/netinet/tcpip.h',
             'sys/netinet/tcp_lro.h',
@@ -1693,7 +1743,6 @@ def netinet6(mm):
         [
             'sys/netinet6/icmp6.h',
             'sys/netinet6/in6_fib.h',
-            'sys/netinet6/in6.h',
             'sys/netinet6/in6_ifattach.h',
             'sys/netinet6/in6_pcb.h',
             'sys/netinet6/in6_rss.h',
@@ -2155,6 +2204,8 @@ def user_space(mm):
     mod = builder.Module('user_space')
     mod.addUserSpaceHeaderFiles(
         [
+            'bin/stty/extern.h',
+            'bin/stty/stty.h',
             'contrib/libxo/libxo/xo_buf.h',
             'contrib/libxo/libxo/xo_encoder.h',
             'contrib/libxo/libxo/xo.h',
@@ -2163,7 +2214,6 @@ def user_space(mm):
             'sbin/pfctl/pfctl.h',
             'sbin/pfctl/pfctl_parser.h',
             'include/arpa/ftp.h',
-            'include/arpa/inet.h',
             'include/arpa/nameser_compat.h',
             'include/arpa/nameser.h',
             'include/db.h',
@@ -2315,6 +2365,13 @@ def user_space(mm):
     mod.addUserSpaceSourceFiles(
         [
             'bin/hostname/hostname.c',
+            'bin/stty/cchar.c',
+            'bin/stty/gfmt.c',
+            'bin/stty/key.c',
+            'bin/stty/modes.c',
+            'bin/stty/print.c',
+            'bin/stty/stty.c',
+            'bin/stty/util.c',
             'contrib/libxo/libxo/libxo.c',
             'contrib/libxo/libxo/xo_encoder.c',
             'lib/lib80211/lib80211_ioctl.c',
@@ -3012,6 +3069,10 @@ def tests(mm):
     mod.addTest(mm.generator['test']('program01', ['test_main']))
     mod.addTest(mm.generator['test']('commands01', ['test_main']))
     mod.addTest(mm.generator['test']('usb01', ['init'], False))
+    mod.addTest(mm.generator['test']('usbserial01', ['init'], False))
+    mod.addTest(mm.generator['test']('usbkbd01', ['init'], False))
+    mod.addTest(mm.generator['test']('usbmouse01', ['init'], False))
+    mod.addTest(mm.generator['test']('evdev01', ['init'], False))
     mod.addTest(mm.generator['test']('loopback01', ['test_main']))
     mod.addTest(mm.generator['test']('netshell01', ['test_main', 'shellconfig'], False))
     mod.addTest(mm.generator['test']('swi01', ['init', 'swi_test']))
@@ -3033,6 +3094,27 @@ def tests(mm):
     mod.addTest(mm.generator['test']('cdev01', ['test_main', 'test_cdev']))
     mod.addTest(mm.generator['test']('pf01', ['test_main']))
     mod.addTest(mm.generator['test']('pf02', ['test_main'], runTest = False))
+    mod.addTest(mm.generator['test']('termios', ['test_main',
+                                     'test_termios_driver',
+                                     'test_termios_utilities']))
+    mod.addTest(mm.generator['test']('termios01', ['test_main',
+                                     '../termios/test_termios_driver',
+                                     '../termios/test_termios_utilities']))
+    mod.addTest(mm.generator['test']('termios02', ['test_main',
+                                     '../termios/test_termios_driver',
+                                     '../termios/test_termios_utilities']))
+    mod.addTest(mm.generator['test']('termios03', ['test_main',
+                                     '../termios/test_termios_driver',
+                                     '../termios/test_termios_utilities']))
+    mod.addTest(mm.generator['test']('termios04', ['test_main',
+                                     '../termios/test_termios_driver',
+                                     '../termios/test_termios_utilities']))
+    mod.addTest(mm.generator['test']('termios05', ['test_main',
+                                     '../termios/test_termios_driver',
+                                     '../termios/test_termios_utilities']))
+    mod.addTest(mm.generator['test']('termios06', ['test_main',
+                                     '../termios/test_termios_driver',
+                                     '../termios/test_termios_utilities']))
     mod.addTest(mm.generator['test-if-header']('debugger01', 'rtems/rtems-debugger.h',
                                                ['test_main'], runTest = False, netTest = True))
     return mod
@@ -3119,7 +3201,10 @@ def sources(mm):
     mm.addModule(base(mm))
 
     mm.addModule(fdt(mm))
+    mm.addModule(tty(mm))
     mm.addModule(mmc(mm))
+    mm.addModule(dev_input(mm))
+    mm.addModule(evdev(mm))
 
     mm.addModule(dev_usb(mm))
     #mm.addModule(dev_usb_add_on(mm))
@@ -3129,9 +3214,8 @@ def sources(mm):
     #mm.addModule(dev_usb_misc(mm))
 
     #mm.addModule(dev_usb_bluetooth(mm))
-    #mm.addModule(dev_usb_input(mm))
-    #mm.addModule(dev_usb_mouse(mm))
-    #mm.addModule(dev_usb_serial(mm))
+    mm.addModule(dev_usb_input(mm))
+    mm.addModule(dev_usb_serial(mm))
     mm.addModule(dev_usb_net(mm))
     mm.addModule(dev_usb_wlan(mm))
     mm.addModule(dev_wlan_rtwn(mm))

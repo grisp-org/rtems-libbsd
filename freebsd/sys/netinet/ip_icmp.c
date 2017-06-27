@@ -36,14 +36,14 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_inet.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rmlock.h>
 #include <sys/sysctl.h>
 #include <sys/syslog.h>

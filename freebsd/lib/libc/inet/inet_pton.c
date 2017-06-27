@@ -24,7 +24,7 @@ static const char rcsid[] = "$Id: inet_pton.c,v 1.5 2005/07/28 06:51:47 marka Ex
 __FBSDID("$FreeBSD$");
 
 #include "port_before.h"
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -216,11 +216,13 @@ inet_pton6(const char *src, u_char *dst)
 	return (1);
 }
 
+#ifndef __rtems__
 /*
  * Weak aliases for applications that use certain private entry points,
  * and fail to include <arpa/inet.h>.
  */
 #undef inet_pton
 __weak_reference(__inet_pton, inet_pton);
+#endif /* __rtems__ */
 
 /*! \file */

@@ -203,6 +203,7 @@ struct file {
 };
 #ifdef __rtems__
 #define f_data f_io.pathinfo.node_access_2
+#define	f_cdevpriv	f_io.data1
 
 static inline struct file *
 rtems_bsd_iop_to_fp(rtems_libio_t *iop)
@@ -279,8 +280,10 @@ rtems_bsd_error_to_status_and_errno(int error)
 }
 #endif /* __rtems__ */
 
+#ifndef __rtems__
 #define	f_cdevpriv	f_vnun.fvn_cdevpriv
 #define	f_advice	f_vnun.fvn_advice
+#endif /* __rtems__ */
 
 #define	FOFFSET_LOCKED       0x1
 #define	FOFFSET_LOCK_WAITING 0x2

@@ -137,7 +137,7 @@ static int lpc_otg_clk_ctrl(uint32_t otg_clk_ctrl)
 #include <sys/cdefs.h>
 #include <sys/stdint.h>
 #include <sys/stddef.h>
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -145,7 +145,7 @@ static int lpc_otg_clk_ctrl(uint32_t otg_clk_ctrl)
 #include <sys/bus.h>
 #include <sys/linker_set.h>
 #include <sys/module.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/condvar.h>
 #include <sys/sysctl.h>

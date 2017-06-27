@@ -42,12 +42,12 @@ __FBSDID("$FreeBSD$");
  * NWAY to work right is amazingly difficult.
  */
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
-#include <rtems/bsd/sys/errno.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/errno.h>
+#include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/bus.h>

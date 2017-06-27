@@ -32,10 +32,10 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_bus.h>
 #include <rtems/bsd/local/opt_ddb.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/filio.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
 #include <sys/limits.h>
@@ -58,7 +58,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/uio.h>
 #include <sys/bus.h>
 #include <sys/interrupt.h>
-#include <rtems/bsd/sys/cpuset.h>
+#include <sys/cpuset.h>
 
 #include <net/vnet.h>
 

@@ -40,12 +40,12 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_ipfw.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/hash.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rwlock.h>
 #include <sys/rmlock.h>
 #include <sys/socket.h>

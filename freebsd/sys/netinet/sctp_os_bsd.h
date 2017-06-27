@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_inet.h>
 #include <rtems/bsd/local/opt_sctp.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/ktr.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -57,7 +57,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rwlock.h>
 #include <sys/kthread.h>
 #include <sys/priv.h>

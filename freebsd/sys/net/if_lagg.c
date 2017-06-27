@@ -27,7 +27,7 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_inet6.h>
 #include <rtems/bsd/local/opt_ratelimit.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -39,7 +39,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/priv.h>
 #include <sys/systm.h>
 #include <sys/proc.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rmlock.h>
 #include <sys/taskqueue.h>
 #include <sys/eventhandler.h>

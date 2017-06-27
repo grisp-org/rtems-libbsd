@@ -62,7 +62,7 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_ddb.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/domain.h>
 #include <sys/fcntl.h>
@@ -71,7 +71,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mbuf.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>

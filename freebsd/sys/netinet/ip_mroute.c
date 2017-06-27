@@ -76,11 +76,11 @@ __FBSDID("$FreeBSD$");
 
 #define _PIM_VT 1
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/stddef.h>
 #include <sys/eventhandler.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/ktr.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>

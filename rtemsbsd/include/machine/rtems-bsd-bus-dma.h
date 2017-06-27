@@ -47,9 +47,9 @@
 #ifndef _RTEMS_BSD_MACHINE_RTEMS_BSD_BUS_DMA_H_
 #define _RTEMS_BSD_MACHINE_RTEMS_BSD_BUS_DMA_H_
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/types.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <machine/bus.h>

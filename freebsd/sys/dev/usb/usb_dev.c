@@ -34,14 +34,14 @@
 #else
 #include <sys/stdint.h>
 #include <sys/stddef.h>
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/module.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/condvar.h>
 #include <sys/sysctl.h>
@@ -804,9 +804,11 @@ usb_fifo_close(struct usb_fifo *f, int fflags)
 	}
 	/* check if a thread wants SIGIO */
 	if (f->async_p != NULL) {
+#ifndef __rtems__
 		PROC_LOCK(f->async_p);
 		kern_psignal(f->async_p, SIGIO);
 		PROC_UNLOCK(f->async_p);
+#endif /* __rtems__ */
 		f->async_p = NULL;
 	}
 	/* remove FWRITE and FREAD flags */
@@ -1025,6 +1027,7 @@ usb_ioctl_f_sub(struct usb_fifo *f, u_long cmd, void *addr,
 		break;
 
 	case FIOASYNC:
+#ifndef __rtems__
 		if (*(int *)addr) {
 			if (f->async_p != NULL) {
 				error = EBUSY;
@@ -1034,6 +1037,9 @@ usb_ioctl_f_sub(struct usb_fifo *f, u_long cmd, void *addr,
 		} else {
 			f->async_p = NULL;
 		}
+#else /* __rtems__ */
+		f->async_p = NULL;
+#endif /* __rtems__ */
 		break;
 
 		/* XXX this is not the most general solution */
@@ -1042,10 +1048,12 @@ usb_ioctl_f_sub(struct usb_fifo *f, u_long cmd, void *addr,
 			error = EINVAL;
 			break;
 		}
+#ifndef __rtems__
 		if (*(int *)addr != USB_PROC_GET_GID(f->async_p)) {
 			error = EPERM;
 			break;
 		}
+#endif /* __rtems__ */
 		break;
 	default:
 		return (ENOIOCTL);
@@ -1769,11 +1777,13 @@ usb_fifo_wakeup(struct usb_fifo *f)
 		selwakeup(&f->selinfo);
 		f->flag_isselect = 0;
 	}
+#ifndef __rtems__
 	if (f->async_p != NULL) {
 		PROC_LOCK(f->async_p);
 		kern_psignal(f->async_p, SIGIO);
 		PROC_UNLOCK(f->async_p);
 	}
+#endif /* __rtems__ */
 }
 
 static int

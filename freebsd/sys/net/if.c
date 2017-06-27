@@ -36,7 +36,7 @@
 #include <rtems/bsd/local/opt_inet6.h>
 #include <rtems/bsd/local/opt_inet.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/conf.h>
 #include <sys/malloc.h>
@@ -50,7 +50,7 @@
 #include <sys/socketvar.h>
 #include <sys/protosw.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/refcount.h>
 #include <sys/module.h>
 #include <sys/rwlock.h>

@@ -36,10 +36,10 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_inet6.h>
 #include <rtems/bsd/local/opt_ipsec.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/md5.h>
 #include <sys/rmlock.h>
 #include <sys/socket.h>

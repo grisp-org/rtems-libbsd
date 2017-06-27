@@ -41,11 +41,11 @@
 #include <rtems/bsd/local/opt_ipsec.h>
 
 #include <sys/types.h>
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/fnv_hash.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
@@ -55,7 +55,7 @@
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
-#include <rtems/bsd/sys/errno.h>
+#include <sys/errno.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/refcount.h>

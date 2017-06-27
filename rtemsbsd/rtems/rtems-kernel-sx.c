@@ -41,10 +41,10 @@
 #include <machine/rtems-bsd-muteximpl.h>
 #include <machine/rtems-bsd-thread.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/systm.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/sx.h>
 
 #ifndef INVARIANTS

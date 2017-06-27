@@ -247,6 +247,13 @@ def build(bld):
     libbsd_use += ["objs01"]
 
     objs02_source = ['freebsd/bin/hostname/hostname.c',
+                     'freebsd/bin/stty/cchar.c',
+                     'freebsd/bin/stty/gfmt.c',
+                     'freebsd/bin/stty/key.c',
+                     'freebsd/bin/stty/modes.c',
+                     'freebsd/bin/stty/print.c',
+                     'freebsd/bin/stty/stty.c',
+                     'freebsd/bin/stty/util.c',
                      'freebsd/contrib/libxo/libxo/libxo.c',
                      'freebsd/contrib/libxo/libxo/xo_encoder.c',
                      'freebsd/lib/lib80211/lib80211_ioctl.c',
@@ -788,9 +795,15 @@ def build(bld):
               'freebsd/sys/dev/e1000/em_txrx.c',
               'freebsd/sys/dev/e1000/if_em.c',
               'freebsd/sys/dev/e1000/igb_txrx.c',
+              'freebsd/sys/dev/evdev/cdev.c',
+              'freebsd/sys/dev/evdev/evdev.c',
+              'freebsd/sys/dev/evdev/evdev_mt.c',
+              'freebsd/sys/dev/evdev/evdev_utils.c',
+              'freebsd/sys/dev/evdev/uinput.c',
               'freebsd/sys/dev/fdt/fdt_common.c',
               'freebsd/sys/dev/fdt/simplebus.c',
               'freebsd/sys/dev/fxp/if_fxp.c',
+              'freebsd/sys/dev/kbd/kbd.c',
               'freebsd/sys/dev/led/led.c',
               'freebsd/sys/dev/mii/brgphy.c',
               'freebsd/sys/dev/mii/e1000phy.c',
@@ -906,6 +919,12 @@ def build(bld):
               'freebsd/sys/dev/smc/if_smc.c',
               'freebsd/sys/dev/tsec/if_tsec.c',
               'freebsd/sys/dev/tsec/if_tsec_fdt.c',
+              'freebsd/sys/dev/usb/input/atp.c',
+              'freebsd/sys/dev/usb/input/uep.c',
+              'freebsd/sys/dev/usb/input/uhid.c',
+              'freebsd/sys/dev/usb/input/ukbd.c',
+              'freebsd/sys/dev/usb/input/ums.c',
+              'freebsd/sys/dev/usb/input/wsp.c',
               'freebsd/sys/dev/usb/net/if_aue.c',
               'freebsd/sys/dev/usb/net/if_axe.c',
               'freebsd/sys/dev/usb/net/if_axge.c',
@@ -921,6 +940,26 @@ def build(bld):
               'freebsd/sys/dev/usb/net/ruephy.c',
               'freebsd/sys/dev/usb/net/usb_ethernet.c',
               'freebsd/sys/dev/usb/quirk/usb_quirk.c',
+              'freebsd/sys/dev/usb/serial/u3g.c',
+              'freebsd/sys/dev/usb/serial/uark.c',
+              'freebsd/sys/dev/usb/serial/ubsa.c',
+              'freebsd/sys/dev/usb/serial/ubser.c',
+              'freebsd/sys/dev/usb/serial/uchcom.c',
+              'freebsd/sys/dev/usb/serial/ucycom.c',
+              'freebsd/sys/dev/usb/serial/ufoma.c',
+              'freebsd/sys/dev/usb/serial/uftdi.c',
+              'freebsd/sys/dev/usb/serial/ugensa.c',
+              'freebsd/sys/dev/usb/serial/uipaq.c',
+              'freebsd/sys/dev/usb/serial/ulpt.c',
+              'freebsd/sys/dev/usb/serial/umcs.c',
+              'freebsd/sys/dev/usb/serial/umct.c',
+              'freebsd/sys/dev/usb/serial/umodem.c',
+              'freebsd/sys/dev/usb/serial/umoscom.c',
+              'freebsd/sys/dev/usb/serial/uplcom.c',
+              'freebsd/sys/dev/usb/serial/usb_serial.c',
+              'freebsd/sys/dev/usb/serial/uslcom.c',
+              'freebsd/sys/dev/usb/serial/uvisor.c',
+              'freebsd/sys/dev/usb/serial/uvscom.c',
               'freebsd/sys/dev/usb/storage/umass.c',
               'freebsd/sys/dev/usb/usb_busdma.c',
               'freebsd/sys/dev/usb/usb_core.c',
@@ -949,6 +988,7 @@ def build(bld):
               'freebsd/sys/dev/usb/wlan/if_ural.c',
               'freebsd/sys/dev/usb/wlan/if_urtw.c',
               'freebsd/sys/dev/usb/wlan/if_zyd.c',
+              'freebsd/sys/fs/devfs/devfs_vnops.c',
               'freebsd/sys/kern/init_main.c',
               'freebsd/sys/kern/kern_condvar.c',
               'freebsd/sys/kern/kern_conf.c',
@@ -988,6 +1028,10 @@ def build(bld):
               'freebsd/sys/kern/sys_generic.c',
               'freebsd/sys/kern/sys_pipe.c',
               'freebsd/sys/kern/sys_socket.c',
+              'freebsd/sys/kern/tty.c',
+              'freebsd/sys/kern/tty_inq.c',
+              'freebsd/sys/kern/tty_outq.c',
+              'freebsd/sys/kern/tty_ttydisc.c',
               'freebsd/sys/kern/uipc_accf.c',
               'freebsd/sys/kern/uipc_domain.c',
               'freebsd/sys/kern/uipc_mbuf.c',
@@ -1310,6 +1354,7 @@ def build(bld):
               'rtemsbsd/rtems/rtems-bsd-shell-pfctl.c',
               'rtemsbsd/rtems/rtems-bsd-shell-ping.c',
               'rtemsbsd/rtems/rtems-bsd-shell-route.c',
+              'rtemsbsd/rtems/rtems-bsd-shell-stty.c',
               'rtemsbsd/rtems/rtems-bsd-shell-sysctl.c',
               'rtemsbsd/rtems/rtems-bsd-shell-tcpdump.c',
               'rtemsbsd/rtems/rtems-bsd-shell-vmstat.c',
@@ -1358,6 +1403,7 @@ def build(bld):
               'rtemsbsd/rtems/syslog.c',
               'rtemsbsd/sys/dev/dw_mmc/dw_mmc.c',
               'rtemsbsd/sys/dev/ffec/if_ffec_mcf548x.c',
+              'rtemsbsd/sys/dev/input/touchscreen/tsc_lpc32xx.c',
               'rtemsbsd/sys/dev/smc/if_smc_nexus.c',
               'rtemsbsd/sys/dev/tsec/if_tsec_nexus.c',
               'rtemsbsd/sys/dev/usb/controller/dwc_otg_nexus.c',
@@ -1519,6 +1565,16 @@ def build(bld):
                 cflags = cflags,
                 includes = includes,
                 source = test_dhcpcd02,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_evdev01 = ['testsuite/evdev01/init.c']
+    bld.program(target = "evdev01.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_evdev01,
                 use = ["bsd"],
                 lib = ["m", "z"],
                 install_path = None)
@@ -1785,6 +1841,90 @@ def build(bld):
                 lib = ["m", "z"],
                 install_path = None)
 
+    test_termios = ['testsuite/termios/test_main.c',
+                    'testsuite/termios/test_termios_driver.c',
+                    'testsuite/termios/test_termios_utilities.c']
+    bld.program(target = "termios.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_termios,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_termios01 = ['testsuite/termios01/../termios/test_termios_driver.c',
+                      'testsuite/termios01/../termios/test_termios_utilities.c',
+                      'testsuite/termios01/test_main.c']
+    bld.program(target = "termios01.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_termios01,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_termios02 = ['testsuite/termios02/../termios/test_termios_driver.c',
+                      'testsuite/termios02/../termios/test_termios_utilities.c',
+                      'testsuite/termios02/test_main.c']
+    bld.program(target = "termios02.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_termios02,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_termios03 = ['testsuite/termios03/../termios/test_termios_driver.c',
+                      'testsuite/termios03/../termios/test_termios_utilities.c',
+                      'testsuite/termios03/test_main.c']
+    bld.program(target = "termios03.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_termios03,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_termios04 = ['testsuite/termios04/../termios/test_termios_driver.c',
+                      'testsuite/termios04/../termios/test_termios_utilities.c',
+                      'testsuite/termios04/test_main.c']
+    bld.program(target = "termios04.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_termios04,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_termios05 = ['testsuite/termios05/../termios/test_termios_driver.c',
+                      'testsuite/termios05/../termios/test_termios_utilities.c',
+                      'testsuite/termios05/test_main.c']
+    bld.program(target = "termios05.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_termios05,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_termios06 = ['testsuite/termios06/../termios/test_termios_driver.c',
+                      'testsuite/termios06/../termios/test_termios_utilities.c',
+                      'testsuite/termios06/test_main.c']
+    bld.program(target = "termios06.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_termios06,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
     test_thread01 = ['testsuite/thread01/test_main.c']
     bld.program(target = "thread01.exe",
                 features = "cprogram",
@@ -1822,6 +1962,36 @@ def build(bld):
                 cflags = cflags,
                 includes = includes,
                 source = test_usb01,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_usbkbd01 = ['testsuite/usbkbd01/init.c']
+    bld.program(target = "usbkbd01.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_usbkbd01,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_usbmouse01 = ['testsuite/usbmouse01/init.c']
+    bld.program(target = "usbmouse01.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_usbmouse01,
+                use = ["bsd"],
+                lib = ["m", "z"],
+                install_path = None)
+
+    test_usbserial01 = ['testsuite/usbserial01/init.c']
+    bld.program(target = "usbserial01.exe",
+                features = "cprogram",
+                cflags = cflags,
+                includes = includes,
+                source = test_usbserial01,
                 use = ["bsd"],
                 lib = ["m", "z"],
                 install_path = None)

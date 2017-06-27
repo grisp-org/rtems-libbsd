@@ -50,14 +50,14 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_init_path.h>
 #include <rtems/bsd/local/opt_verbose_sysinit.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/exec.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/jail.h>
 #include <sys/ktr.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/loginclass.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
@@ -78,7 +78,7 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/sys/unistd.h>
 #include <sys/malloc.h>
 #include <sys/conf.h>
-#include <rtems/bsd/sys/cpuset.h>
+#include <sys/cpuset.h>
 
 #include <machine/cpu.h>
 

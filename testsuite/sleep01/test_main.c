@@ -31,9 +31,9 @@
 
 #include <machine/rtems-bsd-kernel-space.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 
 #include <assert.h>

@@ -32,14 +32,14 @@
 #ifndef _SYS_FAIL_H_
 #define _SYS_FAIL_H_
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/cdefs.h>
 #include <sys/linker_set.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
 #include <sys/condvar.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
 

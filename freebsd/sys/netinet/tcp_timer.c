@@ -39,9 +39,9 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_tcpdebug.h>
 #include <rtems/bsd/local/opt_rss.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
 #include <sys/protosw.h>

@@ -50,12 +50,12 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_ipsec.h>
 #include <rtems/bsd/local/opt_rss.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/domain.h>
 #include <sys/eventhandler.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/priv.h>

@@ -29,14 +29,14 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
-#include <rtems/bsd/sys/errno.h>
+#include <sys/errno.h>
 #include <sys/jail.h>
 #include <sys/malloc.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/rmlock.h>
 #include <sys/sx.h>

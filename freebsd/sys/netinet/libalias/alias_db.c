@@ -146,10 +146,10 @@ __FBSDID("$FreeBSD$");
 
 #ifdef _KERNEL
 #include <machine/stdarg.h>
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/rwlock.h>
 #include <sys/syslog.h>
@@ -157,7 +157,7 @@ __FBSDID("$FreeBSD$");
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <rtems/bsd/sys/errno.h>
+#include <sys/errno.h>
 #include <sys/time.h>
 #include <unistd.h> 
 #endif

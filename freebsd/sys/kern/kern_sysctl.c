@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_compat.h>
 #include <rtems/bsd/local/opt_ktrace.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/fail.h>
 #include <sys/systm.h>
 #include <sys/capsicum.h>
@@ -54,7 +54,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/jail.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/rmlock.h>
 #include <sys/sbuf.h>

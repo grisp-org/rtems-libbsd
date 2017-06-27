@@ -31,17 +31,17 @@
  * SUCH DAMAGE.
  */
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/errno.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/errno.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/rmlock.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/systm.h>
 #include <sys/condvar.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/queue.h>

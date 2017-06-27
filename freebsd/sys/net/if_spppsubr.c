@@ -23,14 +23,14 @@
  * $FreeBSD$
  */
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 
 #include <rtems/bsd/local/opt_inet.h>
 #include <rtems/bsd/local/opt_inet6.h>
 
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/rmlock.h>
 #include <sys/sockio.h>

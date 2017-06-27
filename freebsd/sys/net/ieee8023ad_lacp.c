@@ -34,7 +34,7 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_ratelimit.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/callout.h>
 #include <sys/eventhandler.h>
 #include <sys/mbuf.h>
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/sockio.h>
 #include <sys/sysctl.h>
 #include <machine/stdarg.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rwlock.h>
 #include <sys/taskqueue.h>
 

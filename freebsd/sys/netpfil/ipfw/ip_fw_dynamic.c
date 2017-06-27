@@ -42,13 +42,13 @@ __FBSDID("$FreeBSD$");
 #endif /* INET */
 #include <rtems/bsd/local/opt_inet6.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rmlock.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>

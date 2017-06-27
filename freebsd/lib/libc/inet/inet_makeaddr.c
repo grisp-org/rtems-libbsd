@@ -37,7 +37,7 @@ __FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -64,11 +64,13 @@ inet_makeaddr(in_addr_t net, in_addr_t host)
 	return (a);
 }
 
+#ifndef __rtems__
 /*
  * Weak aliases for applications that use certain private entry points,
  * and fail to include <arpa/inet.h>.
  */
 #undef inet_makeaddr
 __weak_reference(__inet_makeaddr, inet_makeaddr);
+#endif /* __rtems__ */
 
 /*! \file */

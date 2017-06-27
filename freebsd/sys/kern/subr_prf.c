@@ -44,10 +44,10 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_printf.h>
 #endif  /* _KERNEL */
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/kdb.h>
 #include <sys/mutex.h>
 #include <sys/sx.h>

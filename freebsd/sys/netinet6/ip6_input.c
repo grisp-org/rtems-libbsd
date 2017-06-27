@@ -71,7 +71,7 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_route.h>
 #include <rtems/bsd/local/opt_rss.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/hhook.h>
 #include <sys/malloc.h>
@@ -82,10 +82,10 @@ __FBSDID("$FreeBSD$");
 #include <sys/sdt.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include <rtems/bsd/sys/errno.h>
+#include <sys/errno.h>
 #include <sys/time.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/rmlock.h>
 #include <sys/syslog.h>
 #include <sys/sysctl.h>

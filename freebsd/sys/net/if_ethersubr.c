@@ -38,10 +38,10 @@
 #include <rtems/bsd/local/opt_mbuf_profiling.h>
 #include <rtems/bsd/local/opt_rss.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mbuf.h>

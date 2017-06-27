@@ -38,13 +38,13 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_rss.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/eventhandler.h>
 #include <sys/hash.h>
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/sysctl.h>
 

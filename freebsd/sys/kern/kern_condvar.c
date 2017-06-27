@@ -31,10 +31,10 @@ __FBSDID("$FreeBSD$");
 
 #include <rtems/bsd/local/opt_ktrace.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/limits.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/kernel.h>

@@ -32,10 +32,10 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_ddb.h>
 #include <rtems/bsd/local/opt_kstack_usage_prof.h>
 
-#include <rtems/bsd/sys/param.h>
+#include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
-#include <rtems/bsd/sys/cpuset.h>
+#include <sys/cpuset.h>
 #include <sys/rtprio.h>
 #include <sys/systm.h>
 #include <sys/interrupt.h>
@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/kthread.h>
 #include <sys/ktr.h>
 #include <sys/limits.h>
-#include <rtems/bsd/sys/lock.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/priv.h>
