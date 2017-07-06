@@ -524,11 +524,23 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 
 		DPRINTFN(5, "STATUS=0x%08x\n", status);
 
+#ifndef __rtems__
 		if (status & SOTG_PTD_DW3_ACTIVE) {
-#ifdef __rtems__
+			goto busy;
+		} else if (status & SOTG_PTD_DW3_HALTED) {
+#else /* __rtems__ */
+		bool active = (status & SOTG_PTD_DW3_ACTIVE);
+		bool cerr3 = ((status & SOTG_PTD_DW3_CERR_3)
+		    == SOTG_PTD_DW3_CERR_3);
+
+		if (active) {
 			uint32_t dw0 = saf1761_peek_host_status_le_4(sc,
 			    pdt_addr + SOTG_PTD_DW0);
-			if ((dw0 & SOTG_PTD_DW0_VALID) == 0) {
+			bool valid = (dw0 & SOTG_PTD_DW0_VALID);
+
+			if (valid) {
+				goto busy;
+			} else if (cerr3) {
 				/* Assume that we have to retry in that case. */
 				temp = SOTG_PTD_DW3_ACTIVE |
 				    (td->toggle << 25) | SOTG_PTD_DW3_CERR_2;
@@ -538,10 +550,12 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 				dw0 |= SOTG_PTD_DW0_VALID;
 				SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW0,
 				    dw0);
+
+				goto busy;
 			}
+		}
+		if (!active && (status & SOTG_PTD_DW3_HALTED)) {
 #endif /* __rtems__ */
-			goto busy;
-		} else if (status & SOTG_PTD_DW3_HALTED) {
 			if (!(status & SOTG_PTD_DW3_ERRORS))
 				td->error_stall = 1;
 			td->error_any = 1;
