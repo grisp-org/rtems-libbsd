@@ -525,7 +525,25 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 		DPRINTFN(5, "STATUS=0x%08x\n", status);
 
 		if (status & SOTG_PTD_DW3_ACTIVE) {
-			goto busy;
+			temp = saf1761_peek_host_status_le_4(sc,
+			    pdt_addr + SOTG_PTD_DW0);
+			if (temp & SOTG_PTD_DW0_VALID) {
+				goto busy;
+			} else {
+				status = saf1761_peek_host_status_le_4(sc,
+				    pdt_addr + SOTG_PTD_DW3);
+
+				/* check if still active */
+				if (status & SOTG_PTD_DW3_ACTIVE) {
+					saf1761_host_channel_free(sc, td);
+					goto retry;
+				} else if (status & SOTG_PTD_DW3_HALTED) {
+					if (!(status & SOTG_PTD_DW3_ERRORS))
+						td->error_stall = 1;
+					td->error_any = 1;
+					goto complete;
+				}
+			}
 		} else if (status & SOTG_PTD_DW3_HALTED) {
 			if (!(status & SOTG_PTD_DW3_ERRORS))
 				td->error_stall = 1;
@@ -569,6 +587,7 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 		}
 		saf1761_host_channel_free(sc, td);
 	}
+retry:
 	if (saf1761_host_channel_alloc(sc, td))
 		goto busy;
 
@@ -1598,6 +1617,8 @@ saf1761_otg_filter_interrupt(void *arg)
 	(void) SAF1761_READ_LE_4(sc, SOTG_INT_PTD_DONE_PTD);
 	(void) SAF1761_READ_LE_4(sc, SOTG_ISO_PTD_DONE_PTD);
 
+	DPRINTFN(9, "HCINTERRUPT=0x%08x DCINTERRUPT=0x%08x\n", hcstat, status);
+
 	if (status & SOTG_DCINTERRUPT_IEPSOF) {
 		if ((sc->sc_host_async_busy_map[1] | sc->sc_host_async_busy_map[0] |
 		     sc->sc_host_intr_busy_map[1] | sc->sc_host_intr_busy_map[0] |
@@ -2464,11 +2485,15 @@ saf1761_otg_init(struct saf1761_otg_softc *sc)
 	 */
 	SAF1761_WRITE_LE_4(sc, SOTG_CTRL_SET_CLR,
 	    SOTG_CTRL_CLR(0xFFFF));
+#ifdef __rtems__
+	SAF1761_WRITE_LE_4(sc, SOTG_CTRL_SET_CLR,
+	    SOTG_CTRL_SET(SOTG_CTRL_SEL_CP_EXT | SOTG_CTRL_VBUS_DRV));
+#else
 	SAF1761_WRITE_LE_4(sc, SOTG_CTRL_SET_CLR,
 	    SOTG_CTRL_SET(SOTG_CTRL_SW_SEL_HC_DC |
 	    SOTG_CTRL_BDIS_ACON_EN | SOTG_CTRL_SEL_CP_EXT |
 	    SOTG_CTRL_VBUS_DRV));
-
+#endif
 	/* disable device address */
 	SAF1761_WRITE_LE_4(sc, SOTG_ADDRESS, 0);
 
