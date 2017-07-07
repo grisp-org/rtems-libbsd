@@ -524,38 +524,9 @@ saf1761_host_bulk_data_rx(struct saf1761_otg_softc *sc, struct saf1761_otg_td *t
 
 		DPRINTFN(5, "STATUS=0x%08x\n", status);
 
-#ifndef __rtems__
 		if (status & SOTG_PTD_DW3_ACTIVE) {
 			goto busy;
 		} else if (status & SOTG_PTD_DW3_HALTED) {
-#else /* __rtems__ */
-		bool active = (status & SOTG_PTD_DW3_ACTIVE);
-		bool cerr3 = ((status & SOTG_PTD_DW3_CERR_3)
-		    == SOTG_PTD_DW3_CERR_3);
-
-		if (active) {
-			uint32_t dw0 = saf1761_peek_host_status_le_4(sc,
-			    pdt_addr + SOTG_PTD_DW0);
-			bool valid = (dw0 & SOTG_PTD_DW0_VALID);
-
-			if (valid) {
-				goto busy;
-			} else if (cerr3) {
-				/* Assume that we have to retry in that case. */
-				temp = SOTG_PTD_DW3_ACTIVE |
-				    (td->toggle << 25) | SOTG_PTD_DW3_CERR_2;
-				SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW3,
-				    temp);
-
-				dw0 |= SOTG_PTD_DW0_VALID;
-				SAF1761_WRITE_LE_4(sc, pdt_addr + SOTG_PTD_DW0,
-				    dw0);
-
-				goto busy;
-			}
-		}
-		if (!active && (status & SOTG_PTD_DW3_HALTED)) {
-#endif /* __rtems__ */
 			if (!(status & SOTG_PTD_DW3_ERRORS))
 				td->error_stall = 1;
 			td->error_any = 1;
@@ -1626,9 +1597,6 @@ saf1761_otg_filter_interrupt(void *arg)
 	(void) SAF1761_READ_LE_4(sc, SOTG_ATL_PTD_DONE_PTD);
 	(void) SAF1761_READ_LE_4(sc, SOTG_INT_PTD_DONE_PTD);
 	(void) SAF1761_READ_LE_4(sc, SOTG_ISO_PTD_DONE_PTD);
-#ifdef __rtems__
-	DPRINTF("HCINTERRUPT=0x%08x DCINTERRUPT=0x%08x\n", hcstat, status);
-#endif /* __rtems__ */
 
 	if (status & SOTG_DCINTERRUPT_IEPSOF) {
 		if ((sc->sc_host_async_busy_map[1] | sc->sc_host_async_busy_map[0] |
@@ -2496,15 +2464,10 @@ saf1761_otg_init(struct saf1761_otg_softc *sc)
 	 */
 	SAF1761_WRITE_LE_4(sc, SOTG_CTRL_SET_CLR,
 	    SOTG_CTRL_CLR(0xFFFF));
-#ifndef __rtems__
 	SAF1761_WRITE_LE_4(sc, SOTG_CTRL_SET_CLR,
 	    SOTG_CTRL_SET(SOTG_CTRL_SW_SEL_HC_DC |
 	    SOTG_CTRL_BDIS_ACON_EN | SOTG_CTRL_SEL_CP_EXT |
 	    SOTG_CTRL_VBUS_DRV));
-#else /* __rtems__ */
-	SAF1761_WRITE_LE_4(sc, SOTG_CTRL_SET_CLR,
-	    SOTG_CTRL_SET(SOTG_CTRL_SEL_CP_EXT | SOTG_CTRL_VBUS_DRV));
-#endif /* __rtems__ */
 
 	/* disable device address */
 	SAF1761_WRITE_LE_4(sc, SOTG_ADDRESS, 0);
