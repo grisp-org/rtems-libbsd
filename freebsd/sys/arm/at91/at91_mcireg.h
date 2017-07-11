@@ -130,6 +130,9 @@
 #define	MCI_SR_OVRE     (0x1u << 30) /* (MCI) Overrun flag */
 #define	MCI_SR_UNRE     (0x1u << 31) /* (MCI) Underrun flag */
 #ifdef __rtems__
+#define	MCI_SR_XFRDONE  (0x1u << 27) /* (MCI) Underrun flag */
+#endif /* __rtems__ */
+#ifdef __rtems__
 /* -------- MCI_DMA : (MCI Offset: 0x50) MCI DMA Control Register --------  */
 #define	MCI_DMA_DMAEN        (0x1u << 8)
 #define	MCI_DMA_CHKSIZE      (0x7u << 4)
