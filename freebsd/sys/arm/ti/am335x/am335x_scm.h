@@ -1,19 +1,6 @@
-/**
- * @file
- *
- * @ingroup rtems_bsd_rtems
- *
- * @brief TODO.
- */
-
-/*
- * Copyright (c) 2009, 2017 embedded brains GmbH.  All rights reserved.
- *
- *  embedded brains GmbH
- *  Dornierstr. 4
- *  82178 Puchheim
- *  Germany
- *  <rtems@embedded-brains.de>
+/*-
+ * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,29 +22,28 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $FreeBSD$
  */
+#ifndef __AM335X_SCM_H__
+#define __AM335X_SCM_H__
 
-#include <machine/rtems-bsd-kernel-space.h>
-#include <machine/rtems-bsd-thread.h>
+/* AM335x-specific registers for control module (scm) */
+#define	SCM_CTRL_STATUS	0x40
+#define	SCM_BGAP_CTRL	0x448
+#define	SCM_BGAP_TEMP_MASK	0xff
+#define	SCM_BGAP_TEMP_SHIFT	8
+#define	SCM_BGAP_BGOFF		(1 << 6)
+#define	SCM_BGAP_SOC		(1 << 4)
+#define	SCM_BGAP_CLRZ		(1 << 3)
+#define	SCM_BGAP_CONTCONV	(1 << 2)
+#define	SCM_BGAP_EOCZ		(1 << 1)
+#define	SCM_USB_CTRL0	0x620
+#define	SCM_USB_STS0	0x624
+#define	SCM_USB_CTRL1	0x628
+#define	SCM_USB_STS1	0x62C
+#define	SCM_MAC_ID0_LO	0x630
+#define	SCM_MAC_ID0_HI	0x634
+#define	SCM_PWMSS_CTRL	0x664
 
-#include <sys/param.h>
-#include <sys/types.h>
-#include <sys/syslog.h>
-#include <sys/systm.h>
-
-#include <stdarg.h>
-
-void
-panic(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vlog(LOG_EMERG, fmt, ap);
-	va_end(ap);
-
-	rtems_task_suspend(RTEMS_SELF);
-
-	/* FIXME */
-	rtems_fatal_error_occurred(0xdeadbeef);
-}
+#endif /* __AM335X_SCM_H__ */
