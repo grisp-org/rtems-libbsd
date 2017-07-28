@@ -153,6 +153,8 @@ uint32_t at91_master_clock;
 #endif
 #ifdef LIBBSP_ARM_ATSAM_BSP_H
 #define AT91_MCI_HAS_4WIRE 1
+#else
+#error This driver has been adapted to work with ATSAM v7 or e7. If you have some other board, please check whether the adaption fits your use case too.
 #endif /* LIBBSP_ARM_ATSAM_BSP_H */
 #endif /* __rtems__ */
 static int mci_debug;
