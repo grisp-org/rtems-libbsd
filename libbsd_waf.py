@@ -464,6 +464,7 @@ def build(bld):
                      'freebsd/lib/libc/stdlib/strtoimax.c',
                      'freebsd/lib/libc/stdlib/strtonum.c',
                      'freebsd/lib/libc/stdlib/strtoumax.c',
+                     'freebsd/lib/libc/string/strnstr.c',
                      'freebsd/lib/libc/string/strsep.c',
                      'freebsd/lib/libc/xdr/xdr.c',
                      'freebsd/lib/libc/xdr/xdr_array.c',

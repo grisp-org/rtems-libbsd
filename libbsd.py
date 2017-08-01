@@ -2544,6 +2544,7 @@ def user_space(mm):
             'lib/libc/stdlib/strtonum.c',
             'lib/libc/stdlib/strtoumax.c',
             'lib/libc/string/strsep.c',
+            'lib/libc/string/strnstr.c',
             'lib/libc/xdr/xdr_array.c',
             'lib/libc/xdr/xdr.c',
             'lib/libc/xdr/xdr_float.c',
