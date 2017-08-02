@@ -74,7 +74,7 @@ vprintf_putchar(int c, void *arg)
 
 	last = arg;
 	*last = c;
-	putchar(c);
+	fputc(c, stdout);
 }
 
 static int
