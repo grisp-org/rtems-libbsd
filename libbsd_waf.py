@@ -246,7 +246,55 @@ def build(bld):
                 source = objs01_source)
     libbsd_use += ["objs01"]
 
-    objs02_source = ['freebsd/bin/hostname/hostname.c',
+    objs02_source = ['freebsd/sys/net80211/ieee80211.c',
+                     'freebsd/sys/net80211/ieee80211_acl.c',
+                     'freebsd/sys/net80211/ieee80211_action.c',
+                     'freebsd/sys/net80211/ieee80211_adhoc.c',
+                     'freebsd/sys/net80211/ieee80211_ageq.c',
+                     'freebsd/sys/net80211/ieee80211_amrr.c',
+                     'freebsd/sys/net80211/ieee80211_crypto.c',
+                     'freebsd/sys/net80211/ieee80211_crypto_ccmp.c',
+                     'freebsd/sys/net80211/ieee80211_crypto_none.c',
+                     'freebsd/sys/net80211/ieee80211_crypto_tkip.c',
+                     'freebsd/sys/net80211/ieee80211_crypto_wep.c',
+                     'freebsd/sys/net80211/ieee80211_ddb.c',
+                     'freebsd/sys/net80211/ieee80211_dfs.c',
+                     'freebsd/sys/net80211/ieee80211_freebsd.c',
+                     'freebsd/sys/net80211/ieee80211_hostap.c',
+                     'freebsd/sys/net80211/ieee80211_ht.c',
+                     'freebsd/sys/net80211/ieee80211_hwmp.c',
+                     'freebsd/sys/net80211/ieee80211_input.c',
+                     'freebsd/sys/net80211/ieee80211_ioctl.c',
+                     'freebsd/sys/net80211/ieee80211_mesh.c',
+                     'freebsd/sys/net80211/ieee80211_monitor.c',
+                     'freebsd/sys/net80211/ieee80211_node.c',
+                     'freebsd/sys/net80211/ieee80211_output.c',
+                     'freebsd/sys/net80211/ieee80211_phy.c',
+                     'freebsd/sys/net80211/ieee80211_power.c',
+                     'freebsd/sys/net80211/ieee80211_proto.c',
+                     'freebsd/sys/net80211/ieee80211_radiotap.c',
+                     'freebsd/sys/net80211/ieee80211_ratectl.c',
+                     'freebsd/sys/net80211/ieee80211_ratectl_none.c',
+                     'freebsd/sys/net80211/ieee80211_regdomain.c',
+                     'freebsd/sys/net80211/ieee80211_rssadapt.c',
+                     'freebsd/sys/net80211/ieee80211_scan.c',
+                     'freebsd/sys/net80211/ieee80211_scan_sta.c',
+                     'freebsd/sys/net80211/ieee80211_scan_sw.c',
+                     'freebsd/sys/net80211/ieee80211_sta.c',
+                     'freebsd/sys/net80211/ieee80211_superg.c',
+                     'freebsd/sys/net80211/ieee80211_tdma.c',
+                     'freebsd/sys/net80211/ieee80211_vht.c',
+                     'freebsd/sys/net80211/ieee80211_wds.c',
+                     'freebsd/sys/net80211/ieee80211_xauth.c']
+    bld.objects(target = "objs02",
+                features = "c",
+                cflags = cflags,
+                includes = [] + includes,
+                defines = defines + ['IEEE80211_DEBUG'],
+                source = objs02_source)
+    libbsd_use += ["objs02"]
+
+    objs03_source = ['freebsd/bin/hostname/hostname.c',
                      'freebsd/bin/stty/cchar.c',
                      'freebsd/bin/stty/gfmt.c',
                      'freebsd/bin/stty/key.c',
@@ -478,24 +526,24 @@ def build(bld):
                      'freebsd/usr.bin/netstat/unix.c',
                      'freebsd/usr.bin/vmstat/vmstat.c',
                      'freebsd/usr.sbin/arp/arp.c']
-    bld.objects(target = "objs02",
-                features = "c",
-                cflags = cflags,
-                includes = [] + includes,
-                defines = defines + ['INET', 'INET6'],
-                source = objs02_source)
-    libbsd_use += ["objs02"]
-
-    objs03_source = ['rtemsbsd/mghttpd/mongoose.c']
     bld.objects(target = "objs03",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
-                defines = defines + ['NO_CGI', 'NO_POPEN', 'NO_SSL', 'USE_WEBSOCKET'],
+                defines = defines + ['INET', 'INET6'],
                 source = objs03_source)
     libbsd_use += ["objs03"]
 
-    objs04_source = ['freebsd/lib/libc/db/btree/bt_close.c',
+    objs04_source = ['rtemsbsd/mghttpd/mongoose.c']
+    bld.objects(target = "objs04",
+                features = "c",
+                cflags = cflags,
+                includes = [] + includes,
+                defines = defines + ['NO_CGI', 'NO_POPEN', 'NO_SSL', 'USE_WEBSOCKET'],
+                source = objs04_source)
+    libbsd_use += ["objs04"]
+
+    objs05_source = ['freebsd/lib/libc/db/btree/bt_close.c',
                      'freebsd/lib/libc/db/btree/bt_conv.c',
                      'freebsd/lib/libc/db/btree/bt_debug.c',
                      'freebsd/lib/libc/db/btree/bt_delete.c',
@@ -519,15 +567,15 @@ def build(bld):
                      'freebsd/lib/libc/db/recno/rec_search.c',
                      'freebsd/lib/libc/db/recno/rec_seq.c',
                      'freebsd/lib/libc/db/recno/rec_utils.c']
-    bld.objects(target = "objs04",
+    bld.objects(target = "objs05",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
                 defines = defines + ['INET6', '__DBINTERFACE_PRIVATE'],
-                source = objs04_source)
-    libbsd_use += ["objs04"]
+                source = objs05_source)
+    libbsd_use += ["objs05"]
 
-    objs05_source = ['dhcpcd/arp.c',
+    objs06_source = ['dhcpcd/arp.c',
                      'dhcpcd/auth.c',
                      'dhcpcd/bpf.c',
                      'dhcpcd/common.c',
@@ -549,15 +597,15 @@ def build(bld):
                      'dhcpcd/ipv6nd.c',
                      'dhcpcd/net.c',
                      'dhcpcd/platform-bsd.c']
-    bld.objects(target = "objs05",
+    bld.objects(target = "objs06",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
                 defines = defines + ['INET', 'INET6', 'MASTER_ONLY', 'THERE_IS_NO_FORK', '__FreeBSD__'],
-                source = objs05_source)
-    libbsd_use += ["objs05"]
+                source = objs06_source)
+    libbsd_use += ["objs06"]
 
-    objs06_source = ['freebsd/contrib/libpcap/bpf_image.c',
+    objs07_source = ['freebsd/contrib/libpcap/bpf_image.c',
                      'freebsd/contrib/libpcap/etherent.c',
                      'freebsd/contrib/libpcap/fad-getad.c',
                      'freebsd/contrib/libpcap/gencode.c',
@@ -570,15 +618,15 @@ def build(bld):
                      'freebsd/contrib/libpcap/savefile.c',
                      'freebsd/contrib/libpcap/sf-pcap-ng.c',
                      'freebsd/contrib/libpcap/sf-pcap.c']
-    bld.objects(target = "objs06",
+    bld.objects(target = "objs07",
                 features = "c",
                 cflags = cflags,
                 includes = [] + includes,
                 defines = defines + ['BSD=1', 'HAVE_INTTYPES=1', 'HAVE_LIMITS_H=1', 'HAVE_NET_IF_MEDIA_H=1', 'HAVE_SNPRINTF=1', 'HAVE_SOCKADDR_SA_LEN=1', 'HAVE_STDINT=1', 'HAVE_STRERROR=1', 'HAVE_STRLCPY=1', 'HAVE_SYS_IOCCOM_H=1', 'HAVE_VSNPRINTF=1', 'INET6', '_U_=__attribute__((unused))', '__FreeBSD__=1'],
-                source = objs06_source)
-    libbsd_use += ["objs06"]
+                source = objs07_source)
+    libbsd_use += ["objs07"]
 
-    objs07_source = ['freebsd/contrib/tcpdump/addrtoname.c',
+    objs08_source = ['freebsd/contrib/tcpdump/addrtoname.c',
                      'freebsd/contrib/tcpdump/af.c',
                      'freebsd/contrib/tcpdump/bpf_dump.c',
                      'freebsd/contrib/tcpdump/checksum.c',
@@ -721,13 +769,13 @@ def build(bld):
                      'freebsd/contrib/tcpdump/smbutil.c',
                      'freebsd/contrib/tcpdump/tcpdump.c',
                      'freebsd/contrib/tcpdump/util.c']
-    bld.objects(target = "objs07",
+    bld.objects(target = "objs08",
                 features = "c",
                 cflags = cflags,
                 includes = ['freebsd/contrib/tcpdump', 'freebsd/usr.sbin/tcpdump/tcpdump'] + includes,
                 defines = defines + ['HAVE_CONFIG_H=1', 'HAVE_NET_PFVAR_H=1', 'INET6', '_U_=__attribute__((unused))', '__FreeBSD__=1'],
-                source = objs07_source)
-    libbsd_use += ["objs07"]
+                source = objs08_source)
+    libbsd_use += ["objs08"]
 
     source = ['freebsd/sys/arm/at91/at91_mci.c',
               'freebsd/sys/arm/lpc/if_lpe.c',
@@ -1096,46 +1144,6 @@ def build(bld):
               'freebsd/sys/net/route.c',
               'freebsd/sys/net/rtsock.c',
               'freebsd/sys/net/slcompress.c',
-              'freebsd/sys/net80211/ieee80211.c',
-              'freebsd/sys/net80211/ieee80211_acl.c',
-              'freebsd/sys/net80211/ieee80211_action.c',
-              'freebsd/sys/net80211/ieee80211_adhoc.c',
-              'freebsd/sys/net80211/ieee80211_ageq.c',
-              'freebsd/sys/net80211/ieee80211_amrr.c',
-              'freebsd/sys/net80211/ieee80211_crypto.c',
-              'freebsd/sys/net80211/ieee80211_crypto_ccmp.c',
-              'freebsd/sys/net80211/ieee80211_crypto_none.c',
-              'freebsd/sys/net80211/ieee80211_crypto_tkip.c',
-              'freebsd/sys/net80211/ieee80211_crypto_wep.c',
-              'freebsd/sys/net80211/ieee80211_ddb.c',
-              'freebsd/sys/net80211/ieee80211_dfs.c',
-              'freebsd/sys/net80211/ieee80211_freebsd.c',
-              'freebsd/sys/net80211/ieee80211_hostap.c',
-              'freebsd/sys/net80211/ieee80211_ht.c',
-              'freebsd/sys/net80211/ieee80211_hwmp.c',
-              'freebsd/sys/net80211/ieee80211_input.c',
-              'freebsd/sys/net80211/ieee80211_ioctl.c',
-              'freebsd/sys/net80211/ieee80211_mesh.c',
-              'freebsd/sys/net80211/ieee80211_monitor.c',
-              'freebsd/sys/net80211/ieee80211_node.c',
-              'freebsd/sys/net80211/ieee80211_output.c',
-              'freebsd/sys/net80211/ieee80211_phy.c',
-              'freebsd/sys/net80211/ieee80211_power.c',
-              'freebsd/sys/net80211/ieee80211_proto.c',
-              'freebsd/sys/net80211/ieee80211_radiotap.c',
-              'freebsd/sys/net80211/ieee80211_ratectl.c',
-              'freebsd/sys/net80211/ieee80211_ratectl_none.c',
-              'freebsd/sys/net80211/ieee80211_regdomain.c',
-              'freebsd/sys/net80211/ieee80211_rssadapt.c',
-              'freebsd/sys/net80211/ieee80211_scan.c',
-              'freebsd/sys/net80211/ieee80211_scan_sta.c',
-              'freebsd/sys/net80211/ieee80211_scan_sw.c',
-              'freebsd/sys/net80211/ieee80211_sta.c',
-              'freebsd/sys/net80211/ieee80211_superg.c',
-              'freebsd/sys/net80211/ieee80211_tdma.c',
-              'freebsd/sys/net80211/ieee80211_vht.c',
-              'freebsd/sys/net80211/ieee80211_wds.c',
-              'freebsd/sys/net80211/ieee80211_xauth.c',
               'freebsd/sys/netinet/accf_data.c',
               'freebsd/sys/netinet/accf_dns.c',
               'freebsd/sys/netinet/accf_http.c',

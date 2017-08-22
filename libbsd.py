@@ -1965,7 +1965,7 @@ def net80211(mm):
             'sys/net80211/ieee80211_wds.c',
             'sys/net80211/ieee80211_xauth.c',
         ],
-        mm.generator['source']()
+        mm.generator['source'](['-DIEEE80211_DEBUG'])
     )
     return mod
 
