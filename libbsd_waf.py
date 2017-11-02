@@ -2351,6 +2351,7 @@ def build(bld):
               'rtemsbsd/rtems/rtems-kernel-thread.c',
               'rtemsbsd/rtems/rtems-kernel-timesupport.c',
               'rtemsbsd/rtems/rtems-kernel-vprintf.c',
+              'rtemsbsd/rtems/rtems-kernel-wpa-supplicant.c',
               'rtemsbsd/rtems/rtems-kvm.c',
               'rtemsbsd/rtems/rtems-legacy-mii.c',
               'rtemsbsd/rtems/rtems-legacy-newproc.c',
