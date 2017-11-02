@@ -198,6 +198,9 @@ class ModuleManager(builder.ModuleManager):
     def setGenerators(self):
         self.generator['convert'] = builder.Converter
         self.generator['no-convert'] = builder.NoConverter
+        self.generator['from-FreeBSD-to-RTEMS-UserSpaceSourceConverter'] = builder.FromFreeBSDToRTEMSUserSpaceSourceConverter
+        self.generator['from-RTEMS-To-FreeBSD-SourceConverter'] = builder.FromRTEMSToFreeBSDSourceConverter
+        self.generator['buildSystemFragmentComposer'] = builder.BuildSystemFragmentComposer
 
         self.generator['file'] = builder.File
 
@@ -392,7 +395,7 @@ class ModuleManager(builder.ModuleManager):
         self.add('    if bld.get_env()["RTEMS_ARCH"] == "i386":')
         self.add('        for i in %r:' % (builder.cpuIncludes()))
         self.add('            includes += ["%s" % (i[2:].replace("@CPU@", "x86"))]')
-        for i in builder.includes():
+        for i in builder.includes() + ['-I' + builder.buildInclude()]:
             self.add('    includes += ["%s"]' % (i[2:]))
         self.add('')
         self.add('    # Collect the libbsd uses')
@@ -442,6 +445,28 @@ class ModuleManager(builder.ModuleManager):
                  '-e \'s/@NET_CFG_GATEWAY_IP@/%s/\' < ${SRC} > ${TGT}" % ' + \
                  '(net_cfg_self_ip, net_cfg_netmask, net_cfg_peer_ip, net_cfg_gateway_ip),')
         self.add('        update_outputs = True)')
+        self.add('')
+
+        #
+        # Add a copy rule for all headers where the install path and the source
+        # path are not the same.
+        #
+        self.add('    # copy headers if necessary')
+        self.add('    header_build_copy_paths = [')
+        for hp in builder.headerPaths():
+            if hp[2] != '' and not hp[0].endswith(hp[2]):
+                self.add('                               %s,' % (str(hp)))
+        self.add('                              ]')
+        self.add('    for headers in header_build_copy_paths:')
+        self.add('        target = os.path.join("%s", headers[2])' % (builder.buildInclude()))
+        self.add('        start_dir = bld.path.find_dir(headers[0])')
+        self.add('        for header in start_dir.ant_glob(headers[1]):')
+        self.add('            relsourcepath = header.path_from(start_dir)')
+        self.add('            targetheader = os.path.join(target, relsourcepath)')
+        self.add('            bld(features = \'subst\',')
+        self.add('                target = targetheader,')
+        self.add('                source = header,')
+        self.add('                is_copy = True)')
         self.add('')
 
         #
@@ -626,7 +651,7 @@ class ModuleManager(builder.ModuleManager):
         self.add('        ipath = os.path.join(rtems.arch_bsp_include_path(bld.env.RTEMS_VERSION, bld.env.RTEMS_ARCH_BSP), headers[2])')
         self.add('        start_dir = bld.path.find_dir(headers[0])')
         self.add('        bld.install_files("${PREFIX}/" + ipath,')
-        self.add('                          start_dir.ant_glob("**/" + headers[1]),')
+        self.add('                          start_dir.ant_glob(headers[1]),')
         self.add('                          cwd = start_dir,')
         self.add('                          relative_trick = True)')
         self.add('')
