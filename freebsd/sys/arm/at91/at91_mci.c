@@ -144,12 +144,13 @@ static sXdmad *pXdmad = &XDMAD_Instance;
 #define BBCOUNT     2
 #ifndef __rtems__
 #define BBSIZE      (16*1024)
+#define MAX_BLOCKS  ((BBSIZE*BBCOUNT)/512)
 #else /* __rtems__ */
 #define BBSIZE      (32*1024)
+#define MAX_BLOCKS  ((BBSIZE)/512)
 /* FIXME: It would be better to split the dma up in that case like in the
  * original driver. But that would need some rework. */
 #endif /* __rtems__ */
-#define MAX_BLOCKS  ((BBSIZE*BBCOUNT)/512)
 
 #ifdef __rtems__
 #ifdef BOARD_MCK
