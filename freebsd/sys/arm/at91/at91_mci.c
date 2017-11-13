@@ -142,7 +142,13 @@ static sXdmad *pXdmad = &XDMAD_Instance;
  * entire data cache, impacting overall system performance.
  */
 #define BBCOUNT     2
+#ifndef __rtems__
 #define BBSIZE      (16*1024)
+#else /* __rtems__ */
+#define BBSIZE      (32*1024)
+/* FIXME: It would be better to split the dma up in that case like in the
+ * original driver. But that would need some rework. */
+#endif /* __rtems__ */
 #define MAX_BLOCKS  ((BBSIZE*BBCOUNT)/512)
 
 #ifdef __rtems__
@@ -948,7 +954,11 @@ at91_mci_start_cmd(struct at91_mci_softc *sc, struct mmc_command *cmd)
 		bus_addr_t paddr;
 		int err;
 
+#ifndef __rtems__
 		if (remaining > (BBCOUNT*BBSIZE))
+#else /* __rtems__ */
+		if (remaining > (BBSIZE))
+#endif /* __rtems__ */
 			panic("IO read size exceeds MAXDATA\n");
 
 		if (data->flags & MMC_DATA_READ) {
