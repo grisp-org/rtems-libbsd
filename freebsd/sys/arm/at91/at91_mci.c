@@ -77,7 +77,16 @@ __FBSDID("$FreeBSD$");
 #include <rtems/bsd/local/opt_at91.h>
 
 #ifdef __rtems__
+#include <bsp.h>
+#endif /* __rtems__ */
+#if defined(__rtems) && defined(LIBBSP_ARM_ATSAM_BSP_H)
+#ifdef __rtems__
 #include <libchip/chip.h>
+
+#define AT91_MCI_HAS_4WIRE 1
+
+uint32_t at91_master_clock = BOARD_MCK;
+
 static sXdmad *pXdmad = &XDMAD_Instance;
 #endif /* __rtems__ */
 /*
@@ -148,22 +157,10 @@ static sXdmad *pXdmad = &XDMAD_Instance;
 #else /* __rtems__ */
 #define BBSIZE      (32*1024)
 #define MAX_BLOCKS  ((BBSIZE)/512)
-/* FIXME: It would be better to split the dma up in that case like in the
+/* FIXME: It would be better to split the DMA up in that case like in the
  * original driver. But that would need some rework. */
 #endif /* __rtems__ */
 
-#ifdef __rtems__
-#ifdef BOARD_MCK
-uint32_t at91_master_clock = BOARD_MCK;
-#else
-uint32_t at91_master_clock;
-#endif
-#ifdef LIBBSP_ARM_ATSAM_BSP_H
-#define AT91_MCI_HAS_4WIRE 1
-#else
-#error This driver has been adapted to work with ATSAM v7 or e7. If you have some other board, please check whether the adaption fits your use case too.
-#endif /* LIBBSP_ARM_ATSAM_BSP_H */
-#endif /* __rtems__ */
 static int mci_debug;
 
 struct at91_mci_softc {
@@ -1680,3 +1677,4 @@ DRIVER_MODULE(at91_mci, nexus, at91_mci_driver, at91_mci_devclass, NULL, NULL);
 #endif /* __rtems__ */
 DRIVER_MODULE(mmc, at91_mci, mmc_driver, mmc_devclass, NULL, NULL);
 MODULE_DEPEND(at91_mci, mmc, 1, 1, 1);
+#endif /* __rtems__ && LIBBSP_ARM_ATSAM_BSP_H */
